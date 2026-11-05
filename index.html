@@ -1,0 +1,1141 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<!--ARTIFACT-START-->
+<title>Modello 3D GraHeaL</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112,600;125,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: full-bleed 3D stage, one floating control/spec panel (left on desktop, bottom sheet on phone). */
+:root {
+  --stage: #e6ecee;
+  --panel: rgba(248, 251, 251, 0.88);
+  --panel-solid: #f8fbfb;
+  --ink: #13202a;
+  --muted: #566672;
+  --line: #c9d4d8;
+  --accent: #8a5d0c;
+  --accent-fill: #c8962e;
+  --on-accent: #1d1406;
+  --blood: #a8241c;
+  --ble: #2462d6;
+  --chip-bg: rgba(255, 255, 255, 0.9);
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --stage: #0d1316; --panel: rgba(18, 26, 30, 0.88); --panel-solid: #121a1e;
+    --ink: #e4ebee; --muted: #93a4ae; --line: #2a3840;
+    --accent: #e3b456; --accent-fill: #d6a440; --on-accent: #1d1406;
+    --blood: #f0695d; --ble: #79a8ff; --chip-bg: rgba(18, 26, 30, 0.9);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --stage: #0d1316; --panel: rgba(18, 26, 30, 0.88); --panel-solid: #121a1e;
+  --ink: #e4ebee; --muted: #93a4ae; --line: #2a3840;
+  --accent: #e3b456; --accent-fill: #d6a440; --on-accent: #1d1406;
+  --blood: #f0695d; --ble: #79a8ff; --chip-bg: rgba(18, 26, 30, 0.9);
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--stage); color: var(--ink);
+  font-family: var(--font-body); font-size: 14px; line-height: 1.45;
+  overflow: hidden;
+}
+#stage { position: fixed; inset: 0; }
+#stage canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
+#labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.lbl {
+  position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 11px; line-height: 1.25; white-space: nowrap;
+  color: var(--ink); transition: opacity .25s;
+}
+.lbl i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-fill); box-shadow: 0 0 0 2px var(--chip-bg); flex: none; }
+.lbl b { font-weight: 500; background: var(--chip-bg); border: 1px solid var(--line); padding: 2px 6px; border-radius: 3px; }
+.lbl small { display: block; color: var(--muted); font-size: 10px; }
+.lbl.left { flex-direction: row-reverse; }
+.lbl.dim { opacity: .28; }
+
+#panel {
+  position: fixed; z-index: 2;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  left: max(16px, env(safe-area-inset-left, 0px));
+  width: 320px; max-height: calc(100% - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  overflow: auto; background: var(--panel); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 16px; display: flex; flex-direction: column; gap: 14px;
+}
+.brand { display: flex; flex-direction: column; gap: 2px; }
+.brand h1 {
+  margin: 0; font-family: var(--font-display); font-stretch: 125%; font-weight: 700;
+  font-size: 26px; letter-spacing: -0.01em; line-height: 1;
+}
+.brand h1 span { color: var(--accent); }
+.brand p { margin: 0; color: var(--muted); font-size: 12px; }
+.eyebrow {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+  margin: 0 0 6px;
+}
+.seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--stage); padding: 3px; border-radius: 7px; border: 1px solid var(--line); }
+.seg button, .pill button, .btn {
+  font: inherit; font-size: 12px; color: var(--ink); background: transparent; border: 0; border-radius: 5px;
+  padding: 7px 4px; cursor: pointer; font-weight: 500;
+}
+.seg button[aria-pressed="true"], .pill button[aria-pressed="true"] { background: var(--panel-solid); box-shadow: 0 1px 2px rgba(0,0,0,.12); color: var(--accent); }
+.seg button:focus-visible, .pill button:focus-visible, .btn:focus-visible, input:focus-visible { outline: 2px solid var(--accent-fill); outline-offset: 1px; }
+.ctrls { display: grid; gap: 10px; }
+.row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 10px; }
+.row label, .row .k { font-size: 12px; color: var(--muted); }
+.pill { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; background: var(--stage); padding: 3px; border-radius: 6px; border: 1px solid var(--line); }
+input[type="range"] { width: 100%; accent-color: var(--accent-fill); }
+.checks { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); }
+.checks label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { border: 1px solid var(--line); padding: 8px 12px; background: var(--panel-solid); }
+.btn.primary { background: var(--blood); border-color: var(--blood); color: #fff; }
+.btn[disabled] { opacity: .45; cursor: default; }
+.spec h2 { margin: 0 0 6px; font-family: var(--font-display); font-stretch: 112%; font-weight: 600; font-size: 15px; text-wrap: balance; }
+.spec dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 5px 10px; font-size: 12px; }
+.spec dt { font-family: var(--font-mono); font-size: 10.5px; color: var(--accent); padding-top: 1px; text-transform: uppercase; letter-spacing: .06em; }
+.spec dd { margin: 0; min-width: 0; }
+.foot { font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
+#hint {
+  position: fixed; z-index: 1; font-family: var(--font-mono); font-size: 11px; color: var(--muted);
+  right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+}
+@media (max-width: 720px) {
+  #panel {
+    top: auto; left: max(10px, env(safe-area-inset-left, 0px)); right: max(10px, env(safe-area-inset-right, 0px));
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px)); width: auto; max-height: 44%;
+    padding: 12px; gap: 10px;
+  }
+  .brand h1 { font-size: 20px; }
+  #hint { display: none; }
+  .lbl { font-size: 10px; }
+  .lbl small { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .lbl { transition: none; } }
+</style>
+
+<div id="stage"><div id="labels" aria-hidden="true"></div></div>
+
+<aside id="panel" aria-label="Controlli modello">
+  <div class="brand">
+    <h1>Gra<span>He</span>aL</h1>
+    <p>Diagnostica Point-of-Care su GFET · cartuccia monouso + lettore portatile</p>
+  </div>
+
+  <div>
+    <p class="eyebrow">Vista</p>
+    <div class="seg" role="group" aria-label="Vista">
+      <button id="v-assembled" data-view="assembled" aria-pressed="true">Insieme</button>
+      <button id="v-chip" data-view="chip" aria-pressed="false">Chip</button>
+      <button id="v-cut" data-view="cut" aria-pressed="false">Spaccato</button>
+      <button id="v-nano" data-view="nano" aria-pressed="false">Nano</button>
+    </div>
+  </div>
+
+  <div class="ctrls">
+    <div class="row">
+      <span class="k">Substrato</span>
+      <div class="pill" role="group" aria-label="Substrato">
+        <button id="s-pla" data-sub="pla" aria-pressed="true">PLA</button>
+        <button id="s-cel" data-sub="cel" aria-pressed="false">Cellulosa</button>
+      </div>
+    </div>
+    <div class="row"><label for="flex">Flessione</label><input id="flex" type="range" min="0" max="1" step="0.01" value="0.55"></div>
+    <div class="row"><label for="explode">Esploso</label><input id="explode" type="range" min="0" max="1" step="0.01" value="0"></div>
+    <div class="checks">
+      <label><input id="opt-labels" type="checkbox" checked> Etichette</label>
+      <label><input id="opt-rotate" type="checkbox"> Rotazione</label>
+    </div>
+    <div class="actions">
+      <button id="btn-test" class="btn primary">Inocula goccia e misura</button>
+      <button id="btn-glb" class="btn" hidden>Esporta .glb</button>
+    </div>
+  </div>
+
+  <section class="spec" id="spec" aria-live="polite"></section>
+  <p class="foot">Modello illustrativo: le dimensioni del lettore sono indicative e le scale nano/macro sono separate.</p>
+</aside>
+<div id="hint">trascina per ruotare · rotella/pinch per zoom · tasto destro per spostare</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+const V3 = THREE.Vector3, V2 = THREE.Vector2;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* ------------------------------------------------------------------ renderer */
+const stageEl = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.localClippingEnabled = true;
+stageEl.prepend(renderer.domElement);
+
+const macro = new THREE.Scene();
+const nanoScene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+const envTex = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+macro.environment = envTex; nanoScene.environment = envTex;
+
+const camera = new THREE.PerspectiveCamera(34, 1, 0.3, 4000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.autoRotateSpeed = 0.8;
+
+function applyThemeBg() {
+  const c = new THREE.Color(css('--stage') || '#e6ecee');
+  macro.background = c; nanoScene.background = c.clone();
+}
+applyThemeBg();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyThemeBg);
+new MutationObserver(applyThemeBg).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+/* ------------------------------------------------------------------ helpers */
+function canvasTex(w, h, draw, repeat = false) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d'); draw(ctx, w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.userData.ctx = ctx; t.userData.canvas = c;
+  return t;
+}
+function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+
+// rounded rectangle outline, CCW, starting at (+w/2, 0)
+function rrPoints(w, h, r, seg = 12) {
+  const hw = w / 2, hh = h / 2, pts = [new V2(hw, 0)];
+  const cs = [[hw - r, hh - r, 0], [-hw + r, hh - r, 90], [-hw + r, -hh + r, 180], [hw - r, -hh + r, 270]];
+  for (const [cx, cy, a0] of cs) for (let i = 0; i <= seg; i++) {
+    const a = THREE.MathUtils.degToRad(a0 + 90 * i / seg);
+    pts.push(new V2(cx + r * Math.cos(a), cy + r * Math.sin(a)));
+  }
+  return pts;
+}
+// extrude a 2D outline (in XZ plan view) upward along +Y between y0 and y0+h
+function extrudeUp(shape, y0, h, opts = {}) {
+  const g = new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false, curveSegments: 16, ...opts });
+  g.rotateX(-Math.PI / 2); g.translate(0, y0, 0); return g;
+}
+function ringShape(w, h, r, t) {
+  const s = new THREE.Shape(rrPoints(w, h, r));
+  s.holes.push(new THREE.Path(rrPoints(w - 2 * t, h - 2 * t, Math.max(r - t, 0.5)).reverse()));
+  return s;
+}
+// ring with a gap on the +X side (the cartridge slot)
+function cRingShape(w, h, r, t, gap) {
+  const o = rrPoints(w, h, r), i = rrPoints(w - 2 * t, h - 2 * t, r - t);
+  const hw = w / 2, hwi = w / 2 - t;
+  const outer = [new V2(hw, gap / 2), ...o.slice(1), new V2(hw, -gap / 2)];
+  const inner = [new V2(hwi, gap / 2), ...i.slice(1), new V2(hwi, -gap / 2)].reverse();
+  return new THREE.Shape([...outer, ...inner]);
+}
+function boxAt(w, h, d, x, y, z, segX = 1, segZ = 1) {
+  const g = new THREE.BoxGeometry(w, h, d, segX, 1, segZ); g.translate(x, y, z); return g;
+}
+// box from x0..x1, y0..y1, z0..z1 with segments along X for bending
+function boxXYZ(x0, x1, y0, y1, z0, z1, segLen = 0.6) {
+  const w = x1 - x0, d = z1 - z0;
+  return boxAt(w, y1 - y0, d, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2, Math.max(1, Math.ceil(w / segLen)), Math.max(1, Math.ceil(d / 2)));
+}
+function mesh(geo, mat, parent, name) {
+  const m = new THREE.Mesh(geo, mat); if (name) m.name = name; if (parent) parent.add(m); return m;
+}
+
+/* ------------------------------------------------------------------ materials */
+const MAT = {
+  gold: new THREE.MeshStandardMaterial({ color: 0xf3c35f, metalness: 1, roughness: 0.2 }),
+  chrome: new THREE.MeshStandardMaterial({ color: 0xbfc5cc, metalness: 1, roughness: 0.16 }),
+  steel: new THREE.MeshStandardMaterial({ color: 0xc9ced3, metalness: 1, roughness: 0.32 }),
+  black: new THREE.MeshStandardMaterial({ color: 0x15181b, roughness: 0.55 }),
+  blackGloss: new THREE.MeshPhysicalMaterial({ color: 0x0c0e10, roughness: 0.2, clearcoat: 1 }),
+  void: new THREE.MeshBasicMaterial({ color: 0x050607, side: THREE.BackSide }),
+  pla: new THREE.MeshPhysicalMaterial({ color: 0xf1e4c8, roughness: 0.32, transmission: 0.55, thickness: 0.4, ior: 1.46, clearcoat: 0.4 }),
+  lid: new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.08, transmission: 0.92, thickness: 0.3, ior: 1.46, transparent: true, opacity: 0.9 }),
+  passiv: new THREE.MeshPhysicalMaterial({ color: 0x6fa8d6, roughness: 0.25, transmission: 0.45, transparent: true, opacity: 0.72, thickness: 0.1 }),
+  blood: new THREE.MeshPhysicalMaterial({ color: 0x8e0f12, roughness: 0.06, clearcoat: 1, clearcoatRoughness: 0.04, transmission: 0.18, thickness: 1.5, ior: 1.36, sheen: 0.3, sheenColor: 0xff6a5a }),
+};
+// cellulose: matte fibrous paper look
+const fiberTex = canvasTex(512, 512, (c, w, h) => {
+  c.fillStyle = '#f4f1ea'; c.fillRect(0, 0, w, h); const r = rng(7);
+  for (let i = 0; i < 1600; i++) {
+    c.strokeStyle = `rgba(${150 + r() * 60},${140 + r() * 60},${120 + r() * 50},${0.10 + r() * 0.14})`;
+    c.lineWidth = 0.6 + r() * 1.2; c.beginPath();
+    const x = r() * w, y = r() * h, a = r() * Math.PI, l = 10 + r() * 40;
+    c.moveTo(x, y); c.quadraticCurveTo(x + Math.cos(a + .4) * l / 2, y + Math.sin(a + .4) * l / 2, x + Math.cos(a) * l, y + Math.sin(a) * l); c.stroke();
+  }
+}, true);
+fiberTex.repeat.set(3, 1);
+MAT.cel = new THREE.MeshStandardMaterial({ color: 0xffffff, map: fiberTex, roughness: 0.93 });
+
+/* ------------------------------------------------------------------ textures */
+// graphene honeycomb (stylised: real lattice is 0.246 nm, here shown as a visible pattern)
+const grapheneTex = canvasTex(1024, 512, (c, w, h) => {
+  const g = c.createLinearGradient(0, 0, w, h); g.addColorStop(0, '#2b3036'); g.addColorStop(1, '#3a4148');
+  c.fillStyle = g; c.fillRect(0, 0, w, h);
+  const s = 9, dx = Math.sqrt(3) * s;
+  c.strokeStyle = 'rgba(190,205,215,0.55)'; c.lineWidth = 1.3;
+  for (let row = -1; row * 1.5 * s < h + s; row++) for (let col = -1; col * dx < w + dx; col++) {
+    const cx = col * dx + (row % 2 ? dx / 2 : 0), cy = row * 1.5 * s;
+    c.beginPath();
+    for (let k = 0; k < 6; k++) { const a = Math.PI / 6 + k * Math.PI / 3; const px = cx + s * Math.cos(a), py = cy + s * Math.sin(a); k ? c.lineTo(px, py) : c.moveTo(px, py); }
+    c.closePath(); c.stroke();
+  }
+  c.fillStyle = 'rgba(220,235,245,0.75)';
+  for (let row = -1; row * 1.5 * s < h + s; row++) for (let col = -1; col * dx < w + dx; col++) {
+    const cx = col * dx + (row % 2 ? dx / 2 : 0), cy = row * 1.5 * s;
+    for (let k = 0; k < 6; k += 2) { const a = Math.PI / 6 + k * Math.PI / 3; c.fillRect(cx + s * Math.cos(a) - 1.2, cy + s * Math.sin(a) - 1.2, 2.4, 2.4); }
+  }
+});
+// receptor speckle for the functionalised channel
+const receptorTex = canvasTex(512, 256, (c, w, h) => {
+  c.clearRect(0, 0, w, h); const r = rng(42);
+  for (let i = 0; i < 900; i++) {
+    const x = r() * w, y = r() * h;
+    c.fillStyle = r() > 0.5 ? 'rgba(242,155,56,0.9)' : 'rgba(80,200,170,0.9)';
+    c.beginPath(); c.arc(x, y, 1.6 + r() * 1.4, 0, 7); c.fill();
+  }
+});
+
+/* ------------------------------------------------------------------ labels */
+const labelLayer = document.getElementById('labels');
+const labels = [];
+function addLabel(title, sub, view, getPos, opts = {}) {
+  const el = document.createElement('div'); el.className = 'lbl' + (opts.left ? ' left' : '');
+  el.innerHTML = `<i></i><b>${title}${sub ? `<small>${sub}</small>` : ''}</b>`;
+  labelLayer.appendChild(el);
+  labels.push({ el, view: Array.isArray(view) ? view : [view], getPos, occlude: opts.occlude });
+}
+
+/* ================================================================== CHIP */
+const CH = { L: 40, W: 14, T: 0.25 };
+const chip = new THREE.Group(); chip.name = 'GraHeaL_Cartuccia'; macro.add(chip);
+const layerNames = ['substrato', 'grafene', 'cromo', 'oro', 'biostrato', 'fluido', 'coperchio'];
+const layers = layerNames.map((n) => { const g = new THREE.Group(); g.name = 'layer_' + n; chip.add(g); return g; });
+const bendables = [];
+function bendable(g) { g.userData.base = g.attributes.position.array.slice(); bendables.push(g); return g; }
+const BEND_AMP = 3.4;
+const bendY = (x, k) => { const u = (x - CH.L / 2) / (CH.L / 2); return k * BEND_AMP * u * u; };
+function applyBend(k) {
+  for (const g of bendables) {
+    const a = g.attributes.position.array, b = g.userData.base;
+    for (let i = 0; i < a.length; i += 3) a[i + 1] = b[i + 1] + bendY(b[i], k);
+    g.attributes.position.needsUpdate = true; g.computeVertexNormals(); g.computeBoundingSphere(); g.computeBoundingBox();
+  }
+}
+
+// substrate
+const substrate = mesh(bendable(boxXYZ(0, CH.L, -CH.T, 0, -CH.W / 2, CH.W / 2, 0.5)), MAT.pla, layers[0], 'substrato_biopolimero');
+// printed graphics on substrate
+const printTex = canvasTex(1600, 560, (c, w, h) => {
+  const px = w / CH.L; // px per mm ; canvas x = chip x, canvas y = z + W/2 (top = -z)
+  const X = (x) => x * px, Y = (z) => (z + CH.W / 2) * px;
+  c.clearRect(0, 0, w, h);
+  c.fillStyle = '#2a3036';
+  c.font = `600 ${0.95 * px}px Archivo, Arial, sans-serif`; c.textBaseline = 'middle';
+  c.fillText('GraHeaL', X(31.2), Y(-5.6));
+  c.font = `${0.5 * px}px "IBM Plex Mono", monospace`;
+  c.fillText('GFET · LOT 26A-0412', X(31.2), Y(-4.6));
+  c.fillStyle = '#2a3036';
+  c.font = `500 ${0.62 * px}px "IBM Plex Mono", monospace`;
+  c.fillText('ACT', X(8.5), Y(6.3)); c.fillText('REF', X(8.5), Y(-6.3));
+  // insertion arrow
+  c.strokeStyle = '#2a3036'; c.lineWidth = 0.12 * px; c.beginPath();
+  c.moveTo(X(16.5), Y(6.3)); c.lineTo(X(12.2), Y(6.3)); c.moveTo(X(12.9), Y(5.9)); c.lineTo(X(12.2), Y(6.3)); c.lineTo(X(12.9), Y(6.7)); c.stroke();
+  c.beginPath(); c.moveTo(X(16.5), Y(-6.3)); c.lineTo(X(12.2), Y(-6.3)); c.moveTo(X(12.9), Y(-5.9)); c.lineTo(X(12.2), Y(-6.3)); c.lineTo(X(12.9), Y(-6.7)); c.stroke();
+  // drop icon + "1 goccia"
+  c.fillStyle = '#a8241c'; c.beginPath();
+  const dx = X(32), dy = Y(5.4), r = 0.55 * px;
+  c.moveTo(dx, dy - r * 1.9); c.quadraticCurveTo(dx + r * 1.1, dy - r * 0.4, dx + r, dy + r * 0.1); c.arc(dx, dy + r * 0.1, r, 0, Math.PI); c.quadraticCurveTo(dx - r * 1.1, dy - r * 0.4, dx, dy - r * 1.9); c.fill();
+  c.fillStyle = '#2a3036'; c.font = `500 ${0.6 * px}px "IBM Plex Sans", sans-serif`; c.fillText('1 goccia', X(33.1), Y(5.4));
+  // inlet target ring
+  c.strokeStyle = 'rgba(168,36,28,0.55)'; c.lineWidth = 0.1 * px; c.beginPath(); c.arc(X(35), Y(0), 2.9 * px, 0, 7); c.stroke();
+});
+// flip: canvas top must map to -z. Plane is built so that v=1 -> z=-W/2
+const printGeo = new THREE.PlaneGeometry(CH.L, CH.W, 64, 4); printGeo.rotateX(-Math.PI / 2); printGeo.translate(CH.L / 2, 0.003, 0);
+mesh(bendable(printGeo), new THREE.MeshStandardMaterial({ map: printTex, transparent: true, roughness: 0.6, depthWrite: false }), layers[0], 'serigrafia');
+
+// differential channels: z0 = +3.2 active, -3.2 reference
+const CHAN = [{ id: 'act', z0: 3.2, s: 1 }, { id: 'ref', z0: -3.2, s: -1 }];
+const ELY0 = 0.0, CR_T = 0.012, AU_T = 0.035;
+const goldGeos = [], crGeos = [];
+function electrodeRect(x0, x1, z0, z1) {
+  crGeos.push(boxXYZ(x0, x1, ELY0, ELY0 + CR_T, Math.min(z0, z1), Math.max(z0, z1)));
+  goldGeos.push(boxXYZ(x0, x1, ELY0 + CR_T, ELY0 + CR_T + AU_T, Math.min(z0, z1), Math.max(z0, z1)));
+}
+function trace(pts, wdt = 0.36) {
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [ax, az] = pts[i], [bx, bz] = pts[i + 1];
+    if (ax === bx) electrodeRect(ax - wdt / 2, ax + wdt / 2, Math.min(az, bz) - wdt / 2, Math.max(az, bz) + wdt / 2);
+    else electrodeRect(Math.min(ax, bx) - wdt / 2, Math.max(ax, bx) + wdt / 2, az - wdt / 2, az + wdt / 2);
+  }
+}
+const PAD_Z = { G: 5.25, D: 3.15, S: 1.05 };
+for (const { z0, s } of CHAN) {
+  // contact pads at the insertion edge
+  for (const k of ['G', 'D', 'S']) electrodeRect(0.8, 6.6, s * PAD_Z[k] - 0.75, s * PAD_Z[k] + 0.75);
+  // source / drain overlapping graphene ends
+  electrodeRect(21.0, 23.6, z0 - 1.25, z0 + 1.25);
+  electrodeRect(26.4, 29.0, z0 - 1.25, z0 + 1.25);
+  // coplanar (liquid) gate strip
+  electrodeRect(22.0, 28.0, s * 5.1, s * 5.85);
+  // traces
+  trace([[6.6, s * PAD_Z.G], [22.2, s * PAD_Z.G]]);
+  trace([[6.6, s * PAD_Z.S], [17, s * PAD_Z.S], [17, z0], [21.2, z0]]);
+  trace([[6.6, s * PAD_Z.D], [15, s * PAD_Z.D], [15, s * 4.62], [30, s * 4.62], [30, z0], [28.8, z0]]);
+}
+mesh(bendable(mergeGeometries(crGeos)), MAT.chrome, layers[2], 'Cr_strato_adesione');
+mesh(bendable(mergeGeometries(goldGeos)), MAT.gold, layers[3], 'Au_elettrodi_S_D_G');
+
+// graphene channels + bio layers
+const grapheneMat = new THREE.MeshPhysicalMaterial({ map: grapheneTex, color: 0xffffff, metalness: 0.35, roughness: 0.32, iridescence: 0.6, iridescenceIOR: 1.8, clearcoat: 0.3 });
+for (const { id, z0 } of CHAN) {
+  const g = new THREE.PlaneGeometry(4.4, 2.2, 12, 2); g.rotateX(-Math.PI / 2); g.translate(25, 0.006, z0);
+  mesh(bendable(g), grapheneMat, layers[1], `grafene_${id}`);
+  if (id === 'act') {
+    const f = new THREE.PlaneGeometry(2.8, 2.2, 8, 2); f.rotateX(-Math.PI / 2); f.translate(25, 0.03, z0);
+    mesh(bendable(f), new THREE.MeshStandardMaterial({ map: receptorTex, transparent: true, roughness: 0.4, depthWrite: false }), layers[4], 'PBASE_aptameri');
+  } else {
+    mesh(bendable(boxXYZ(23.3, 26.7, 0.0, 0.11, z0 - 1.2, z0 + 1.2, 0.4)), MAT.passiv, layers[4], 'passivazione_riferimento');
+  }
+}
+
+// microfluidic sample path (fills during the test)
+const fluidMat = () => new THREE.MeshPhysicalMaterial({ color: 0xb0161a, roughness: 0.1, transparent: true, opacity: 0, transmission: 0.2, depthWrite: false });
+const fluidSegs = [];
+function fluid(geo, name) { const m = mesh(bendable(geo), fluidMat(), layers[5], name); fluidSegs.push(m); return m; }
+{
+  const disc = new THREE.CylinderGeometry(2.45, 2.45, 0.14, 40, 1); disc.translate(35, 0.13, 0); fluid(disc, 'fluido_inlet');
+  fluid(boxXYZ(30.1, 33, 0.06, 0.2, -0.35, 0.35), 'fluido_canale');
+  fluid(boxXYZ(30.1, 30.8, 0.06, 0.2, -3.6, 3.6), 'fluido_biforcazione');
+  const ca = boxXYZ(20.6, 30.1, 0.06, 0.2, 0.9, 6.1), cb = boxXYZ(20.6, 30.1, 0.06, 0.2, -6.1, -0.9);
+  fluid(mergeGeometries([ca, cb]), 'fluido_camere');
+}
+// transparent lid with inlet opening (four segmented slabs around a square window + funnel ring)
+{
+  const y0 = 0.3, y1 = 0.62;
+  const parts = [boxXYZ(18.5, 32.3, y0, y1, -6.8, 6.8), boxXYZ(37.7, 39.6, y0, y1, -6.8, 6.8),
+    boxXYZ(32.3, 37.7, y0, y1, 2.7, 6.8), boxXYZ(32.3, 37.7, y0, y1, -6.8, -2.7)];
+  mesh(bendable(mergeGeometries(parts)), MAT.lid, layers[6], 'coperchio_microfluidico');
+  const prof = [new V2(2.4, y0), new V2(2.75, y0), new V2(2.75, y1), new V2(3.3, 1.05), new V2(3.0, 1.1), new V2(2.4, y1)];
+  const lathe = new THREE.LatheGeometry(prof, 48); lathe.translate(35, 0, 0);
+  mesh(bendable(lathe), new THREE.MeshPhysicalMaterial({ color: 0xf6f6f2, roughness: 0.15, transmission: 0.7, thickness: 0.4 }), layers[6], 'porta_inoculo');
+  // corner fill around the round port
+  const sq = new THREE.Shape(rrPoints(5.4, 5.4, 0.01, 1)); sq.holes.push(new THREE.Path(new THREE.Path().absarc(0, 0, 2.74, 0, Math.PI * 2, true).getPoints(48)));
+  const cf = extrudeUp(sq, y0, y1 - y0); cf.translate(35, 0, 0);
+  mesh(bendable(cf), MAT.lid, layers[6]);
+}
+// blood drop
+const dropGeo = new THREE.SphereGeometry(2.3, 48, 32);
+const drop = mesh(dropGeo, MAT.blood, layers[6], 'goccia_ematica');
+const dropState = { t: 1, falling: false };
+
+const chipState = { bend: 0, bendTarget: 0, explode: 0 };
+function layoutChip() {
+  layers.forEach((g, i) => { g.position.y = i * 2.4 * chipState.explode; });
+  // drop sits in the funnel, or falls toward it
+  const k = chipState.bend, x = 35, base = bendY(x, k) + 0.75;
+  const p = dropState.t; // 0 = high, 1 = landed
+  const ease = p * p;
+  drop.position.set(x, base + (1 - ease) * 16, 0);
+  const sq = p < 1 ? 1 : 1;
+  drop.scale.set(sq, p < 1 ? 1.15 : 0.62, sq);
+}
+
+/* ================================================================== READER */
+const R = { W: 120, D: 64, r: 15, t: 2.4 };
+const reader = new THREE.Group(); reader.name = 'GraHeaL_Lettore_PoC'; macro.add(reader);
+const gBottom = new THREE.Group(); gBottom.name = 'scocca_inferiore';
+const gInside = new THREE.Group(); gInside.name = 'elettronica';
+const gBand = new THREE.Group(); gBand.name = 'fascia_slot';
+const gTop = new THREE.Group(); gTop.name = 'scocca_superiore';
+reader.add(gBottom, gInside, gBand, gTop);
+
+// clipping planes for the cutaway (front half removed: z > CUT)
+const cutPlaneTop = new THREE.Plane(new V3(0, 0, -1), 1000);
+const cutPlaneZ2 = new THREE.Plane(new V3(0, 0, -1), 1000);
+const cutPlaneY = new THREE.Plane(new V3(0, -1, 0), 7.2);
+const clipTop = [cutPlaneTop], clipBottom = [cutPlaneZ2, cutPlaneY];
+const sectionMat = (planes, inter) => new THREE.MeshBasicMaterial({ color: 0xc8962e, side: THREE.BackSide, clippingPlanes: planes, clipIntersection: !!inter });
+function shellMat(color, planes, inter, extra = {}) {
+  return new THREE.MeshPhysicalMaterial({ color, roughness: 0.36, clearcoat: 0.55, clearcoatRoughness: 0.3, clippingPlanes: planes, clipIntersection: !!inter, clipShadows: true, ...extra });
+}
+function shellPart(geo, mat, parent, name, planes, inter) {
+  const m = mesh(geo, mat, parent, name);
+  const sec = mesh(geo, sectionMat(planes, inter), parent); sec.userData.section = true;
+  return m;
+}
+const mWhiteTop = shellMat(0xf2f4f5, clipTop), mWhiteBot = shellMat(0xf2f4f5, clipBottom, true);
+const mBand = shellMat(0x4f5a63, clipTop, false, { roughness: 0.78, clearcoat: 0, sheen: 0.5, sheenColor: 0x8da0b0 });
+
+{
+  // bottom plate (bevelled) + lower walls
+  const b = 1.4, plate = new THREE.Shape(rrPoints(R.W - 2 * b, R.D - 2 * b, R.r - b));
+  const g = new THREE.ExtrudeGeometry(plate, { depth: 0.2, bevelEnabled: true, bevelThickness: b, bevelSize: b, bevelSegments: 6, curveSegments: 18 });
+  g.rotateX(-Math.PI / 2); g.translate(0, b, 0);
+  shellPart(g, mWhiteBot, gBottom, 'fondo', clipBottom, true);
+  shellPart(extrudeUp(ringShape(R.W, R.D, R.r, R.t), 2.2, 8.8), mWhiteBot, gBottom, 'pareti_inferiori', clipBottom, true);
+  // elastomer band with slot gap
+  shellPart(extrudeUp(cRingShape(R.W, R.D, R.r, R.t, 18), 11, 3), mBand, gBand, 'fascia_elastomero', clipTop);
+  // upper walls + bevelled top plate
+  shellPart(extrudeUp(ringShape(R.W, R.D, R.r, R.t), 14, 8.6), mWhiteTop, gTop, 'pareti_superiori', clipTop);
+  const tb = 1.6, top = new THREE.Shape(rrPoints(R.W - 2 * tb, R.D - 2 * tb, R.r - tb));
+  const tg = new THREE.ExtrudeGeometry(top, { depth: 0.8, bevelEnabled: true, bevelThickness: tb, bevelSize: tb, bevelSegments: 8, curveSegments: 18 });
+  tg.rotateX(-Math.PI / 2); tg.translate(0, 22 + tb, 0);
+  shellPart(tg, mWhiteTop, gTop, 'coperchio', clipTop);
+}
+
+// slot bezel (precision cartridge slot on the +X face)
+const SLOT = { x: R.W / 2, y: 12.3, h0: 11.8, h1: 13.2, zw: 8 };
+{
+  const bez = shellMat(0x22272c, clipTop, false, { roughness: 0.45 });
+  const X0 = R.W / 2 - R.t - 0.2, X1 = R.W / 2 + 0.35, w = X1 - X0, cx = (X0 + X1) / 2;
+  mesh(boxAt(w, SLOT.h0 - 11, 18, cx, (11 + SLOT.h0) / 2, 0), bez, gBand, 'bezel_slot');
+  mesh(boxAt(w, 14 - SLOT.h1, 18, cx, (SLOT.h1 + 14) / 2, 0), bez, gBand);
+  mesh(boxAt(w, SLOT.h1 - SLOT.h0, 9 - SLOT.zw, cx, SLOT.y + 0.2, SLOT.zw + (9 - SLOT.zw) / 2), bez, gBand);
+  mesh(boxAt(w, SLOT.h1 - SLOT.h0, 9 - SLOT.zw, cx, SLOT.y + 0.2, -SLOT.zw - (9 - SLOT.zw) / 2), bez, gBand);
+  // dark throat behind the opening
+  const throat = mesh(boxAt(6, SLOT.h1 - SLOT.h0, SLOT.zw * 2, X0 - 3, SLOT.y + 0.2, 0), MAT.void, gBand, 'guida_slot');
+  throat.userData.noShadow = true;
+  // chevron marks either side of the slot
+  const mark = new THREE.MeshStandardMaterial({ color: 0xc8962e, roughness: 0.4, clippingPlanes: clipTop });
+  mesh(boxAt(0.2, 0.5, 2.2, X1 + 0.02, 14.6, 0), mark, gTop, 'indice_slot');
+}
+
+// top surface: display, button, BLE indicator, printed graphics
+const dispCanvasTex = canvasTex(1000, 760, () => {});
+const display = (() => {
+  const s = new THREE.Shape(rrPoints(50, 38, 3)); const g = extrudeUp(s, 26.0, 0.25); g.translate(-18, 0, 0);
+  // planar UV for the screen face
+  const pos = g.attributes.position, uv = g.attributes.uv;
+  for (let i = 0; i < pos.count; i++) uv.setXY(i, (pos.getX(i) + 18 + 25) / 50, 1 - (pos.getZ(i) + 19) / 38);
+  const mats = [new THREE.MeshBasicMaterial({ map: dispCanvasTex, toneMapped: false, clippingPlanes: clipTop }), MAT.blackGloss];
+  const m = mesh(g, mats[0], gTop, 'display');
+  const glass = mesh(extrudeUp(new THREE.Shape(rrPoints(54, 42, 4)), 25.9, 0.2).translate(-18, 0, 0), new THREE.MeshPhysicalMaterial({ color: 0x0b0f12, roughness: 0.08, clearcoat: 1, clippingPlanes: clipTop }), gTop, 'vetro_display');
+  glass.position.y = -0.02;
+  return m;
+})();
+// main button
+{
+  const btnMat = shellMat(0xc8962e, clipTop, false, { roughness: 0.3, metalness: 0.2 });
+  const ring = new THREE.TorusGeometry(6.2, 0.5, 16, 64); ring.rotateX(Math.PI / 2); ring.translate(22, 26.05, 0);
+  mesh(ring, shellMat(0xd9dee1, clipTop), gTop, 'anello_pulsante');
+  const cap = new THREE.CylinderGeometry(5.2, 5.4, 1.2, 48); cap.translate(22, 26.4, 0);
+  mesh(cap, btnMat, gTop, 'pulsante_avvio');
+  const pw = new THREE.CylinderGeometry(1.8, 1.9, 0.8, 32); pw.translate(-50, 26.2, -22);
+  mesh(pw, shellMat(0x4f5a63, clipTop), gTop, 'pulsante_power');
+}
+// printed top graphics (logo, BLE + USB marks)
+const topPrint = canvasTex(1040, 1040, (c, w, h) => {
+  const px = w / 26; // 26 x 26 mm area, x 31..57, z -13..13  (canvas top = -z)
+  c.clearRect(0, 0, w, h);
+  c.fillStyle = '#26313a'; c.textBaseline = 'middle';
+  c.font = `700 ${3.2 * px}px Archivo, Arial, sans-serif`; c.fillText('GraHeaL', 1.2 * px, 3.0 * px);
+  c.font = `500 ${1.25 * px}px "IBM Plex Mono", monospace`; c.fillStyle = '#5a6874';
+  c.fillText('GFET PoC READER', 1.3 * px, 6.0 * px);
+  // BLE glyph near the LED at (x 46, z 9) -> canvas (15, 22)
+  const bx = 18.5 * px, by = 22 * px, s = 1.1 * px;
+  c.strokeStyle = '#2462d6'; c.lineWidth = 0.32 * px; c.lineJoin = 'round'; c.beginPath();
+  c.moveTo(bx - s * .7, by - s * .7); c.lineTo(bx + s * .7, by + s * .7); c.lineTo(bx, by + s * 1.4); c.lineTo(bx, by - s * 1.4); c.lineTo(bx + s * .7, by - s * .7); c.lineTo(bx - s * .7, by + s * .7); c.stroke();
+  c.fillStyle = '#26313a'; c.font = `600 ${1.2 * px}px "IBM Plex Mono", monospace`; c.fillText('BLE', 20.4 * px, 22 * px);
+  // slot arrow toward +x
+  c.strokeStyle = '#c8962e'; c.lineWidth = 0.35 * px; c.beginPath();
+  c.moveTo(19 * px, 13 * px); c.lineTo(24.5 * px, 13 * px); c.moveTo(23.2 * px, 11.9 * px); c.lineTo(24.5 * px, 13 * px); c.lineTo(23.2 * px, 14.1 * px); c.stroke();
+  c.fillStyle = '#5a6874'; c.font = `500 ${1.05 * px}px "IBM Plex Mono", monospace`; c.fillText('CHIP', 19 * px, 15.4 * px);
+});
+{
+  const g = new THREE.PlaneGeometry(26, 26); g.rotateX(-Math.PI / 2); g.translate(44, 26.02, 0);
+  mesh(g, new THREE.MeshStandardMaterial({ map: topPrint, transparent: true, roughness: 0.5, depthWrite: false, clippingPlanes: clipTop }), gTop, 'serigrafia_superiore');
+}
+// BLE status LED (lens on top) + light pipe inside
+const LED = { x: 46, z: 9 };
+const bleMat = new THREE.MeshStandardMaterial({ color: 0x1d4fb8, emissive: 0x3d7dff, emissiveIntensity: 2, roughness: 0.2, clippingPlanes: clipTop });
+{
+  const lens = new THREE.SphereGeometry(1.5, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2); lens.scale(1, 0.55, 1); lens.translate(LED.x, 26, LED.z);
+  mesh(lens, bleMat, gTop, 'LED_BLE');
+  const bez = new THREE.TorusGeometry(1.65, 0.25, 12, 40); bez.rotateX(Math.PI / 2); bez.translate(LED.x, 26.02, LED.z);
+  mesh(bez, shellMat(0xb9c0c6, clipTop, false, { metalness: 0.8, roughness: 0.25 }), gTop);
+}
+// USB-C receptacle on the -X face
+{
+  const W = 8.94, H = 3.26, cy = 6.6, xf = -R.W / 2;
+  const ringS = new THREE.Shape(rrPoints(W + 0.8, H + 0.8, (H + 0.8) / 2, 10));
+  ringS.holes.push(new THREE.Path(rrPoints(W, H, H / 2, 10).reverse()));
+  const toFace = (g) => { g.rotateY(-Math.PI / 2); g.translate(xf, cy, 0); return g; };
+  const shell = new THREE.ExtrudeGeometry(ringS, { depth: 0.5, bevelEnabled: false, curveSegments: 12 }); shell.translate(0, 0, -0.35);
+  mesh(toFace(shell), MAT.steel, gBottom, 'USB_C');
+  const hole = new THREE.ShapeGeometry(new THREE.Shape(rrPoints(W, H, H / 2, 10))); hole.translate(0, 0, 0.02);
+  mesh(toFace(hole), new THREE.MeshBasicMaterial({ color: 0x050607 }), gBottom);
+  const tongue = boxAt(6.7, 0.7, 0.3, 0, 0, 0.15); mesh(toFace(tongue), MAT.black, gBottom);
+  for (let i = 0; i < 12; i++) {
+    const p = boxAt(0.25, 0.04, 0.32, -2.75 + i * 0.5, 0.36, 0.15); mesh(toFace(p), MAT.gold, gBottom);
+    const q = boxAt(0.25, 0.04, 0.32, -2.75 + i * 0.5, -0.36, 0.15); mesh(toFace(q), MAT.gold, gBottom);
+  }
+  // little "5V" icon next to it
+}
+
+/* ---------------- internals: PCB, SoC MCU, DSP, AFE, connector, battery ---------------- */
+const PCB = { x0: -56, x1: 56, z0: -28, z1: 28, y: 3.4, t: 1.6 };
+const pcbTop = PCB.y + PCB.t;
+const pcbTex = canvasTex(2240, 1120, (c, w, h) => {
+  const px = w / (PCB.x1 - PCB.x0); const X = (x) => (x - PCB.x0) * px, Y = (z) => (z - PCB.z0) * px;
+  c.fillStyle = '#0e4a3f'; c.fillRect(0, 0, w, h);
+  const r = rng(3);
+  c.strokeStyle = 'rgba(64,150,120,0.75)'; c.lineCap = 'round';
+  for (let i = 0; i < 260; i++) {
+    c.lineWidth = (0.18 + r() * 0.3) * px; c.beginPath();
+    let x = PCB.x0 + 4 + r() * 104, z = PCB.z0 + 3 + r() * 50; c.moveTo(X(x), Y(z));
+    for (let k = 0; k < 3; k++) { if (k % 2) x += (r() - 0.5) * 30; else z += (r() - 0.5) * 18; c.lineTo(X(x), Y(z)); }
+    c.stroke();
+  }
+  // vias
+  c.fillStyle = '#c9b27a'; for (let i = 0; i < 380; i++) { c.beginPath(); c.arc(X(PCB.x0 + 2 + r() * 108), Y(PCB.z0 + 2 + r() * 52), 0.28 * px, 0, 7); c.fill(); }
+  // BLE meander antenna (copper, keep-out area)
+  c.fillStyle = '#0b3a32'; c.fillRect(X(-22), Y(20.5), 16 * px, 7 * px);
+  c.strokeStyle = '#d6a64a'; c.lineWidth = 0.45 * px; c.beginPath(); c.moveTo(X(-8), Y(21.5));
+  for (let i = 0; i < 7; i++) { const x = -8 - i * 2; c.lineTo(X(x), Y(26.5)); c.lineTo(X(x - 1), Y(26.5)); c.lineTo(X(x - 1), Y(21.5)); c.lineTo(X(x - 2), Y(21.5)); }
+  c.stroke();
+  // silkscreen
+  c.fillStyle = '#e8eee9'; c.font = `600 ${1.6 * px}px "IBM Plex Mono", monospace`;
+  c.fillText('GRAHEAL READER  REV C', X(-52), Y(-24.5));
+  c.font = `${1.1 * px}px "IBM Plex Mono", monospace`;
+  c.fillText('ANT BLE 2.4GHz', X(-21.5), Y(19.4)); c.fillText('U1 SoC', X(-15), Y(4)); c.fillText('U2 DSP', X(6), Y(4));
+  c.fillText('U3 AFE', X(29), Y(4.5)); c.fillText('J1 GFET', X(41), Y(-11)); c.fillText('J2 USB-C', X(-55), Y(-6.5)); c.fillText('BT1', X(-52), Y(1.8));
+  c.strokeStyle = '#e8eee9'; c.lineWidth = 0.15 * px; c.strokeRect(X(-16), Y(5), 14 * px, 14 * px); c.strokeRect(X(4.5), Y(5), 19 * px, 16 * px);
+});
+{
+  const g = extrudeUp(new THREE.Shape(rrPoints(PCB.x1 - PCB.x0, PCB.z1 - PCB.z0, 11)), PCB.y, PCB.t);
+  pcbTex.repeat.set(1 / (PCB.x1 - PCB.x0), 1 / (PCB.z1 - PCB.z0)); pcbTex.offset.set(0.5, 0.5);
+  const side = new THREE.MeshStandardMaterial({ color: 0x0c3a32, roughness: 0.6 });
+  const topM = new THREE.MeshStandardMaterial({ map: pcbTex, roughness: 0.42, metalness: 0.05 });
+  mesh(g, [topM, side], gInside, 'PCB');
+  for (const [x, z] of [[-50, -22], [50, -22], [-50, 22], [50, 22]]) { const s = new THREE.CylinderGeometry(1.4, 1.4, PCB.y - 2.6, 16); s.translate(x, 2.6 + (PCB.y - 2.6) / 2, z); mesh(s, MAT.steel, gInside); }
+}
+function chipPackage(w, d, h, x, z, lines, name, opts = {}) {
+  const tex = canvasTex(512, Math.round(512 * d / w), (c, W, H) => {
+    c.fillStyle = opts.bg || '#17191c'; c.fillRect(0, 0, W, H);
+    c.fillStyle = 'rgba(210,214,218,0.85)'; c.textBaseline = 'top';
+    let y = H * 0.14; lines.forEach((t, i) => {
+      const fs = i === 0 ? W * 0.15 : W * 0.075; c.font = `${i === 0 ? 600 : 400} ${fs}px "IBM Plex Mono", monospace`; c.fillText(t, W * 0.1, y); y += fs * 1.35;
+    });
+    c.beginPath(); c.arc(W * 0.9, H * 0.84, W * 0.035, 0, 7); c.fillStyle = 'rgba(210,214,218,0.5)'; c.fill();
+  });
+  const g = boxAt(w, h, d, x, pcbTop + h / 2 + (opts.lift || 0), z);
+  const body = new THREE.MeshStandardMaterial({ color: opts.bg || 0x17191c, roughness: 0.6 });
+  const m = mesh(g, [body, body, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55 }), body, body, body], gInside, name);
+  // pins (QFN-style pads along the edges)
+  if (opts.pins) {
+    const n = opts.pins; const geos = [];
+    for (let i = 0; i < n; i++) {
+      const t = -w / 2 + (i + 0.5) * w / n;
+      geos.push(boxAt(0.25, 0.12, 0.5, x + t, pcbTop + 0.06, z - d / 2 - 0.15), boxAt(0.25, 0.12, 0.5, x + t, pcbTop + 0.06, z + d / 2 + 0.15));
+      geos.push(boxAt(0.5, 0.12, 0.25, x - w / 2 - 0.15, pcbTop + 0.06, z + t * d / w), boxAt(0.5, 0.12, 0.25, x + w / 2 + 0.15, pcbTop + 0.06, z + t * d / w));
+    }
+    mesh(mergeGeometries(geos), MAT.steel, gInside);
+  }
+  return m;
+}
+const soc = chipPackage(9, 9, 1.0, -9, 12, ['SoC MCU', 'BLE 5.3 RADIO', 'CORTEX-M · 64MHz'], 'SoC_MCU', { pins: 12 });
+// DSP module: daughter board + DSP die + shield frame
+{
+  const sub = boxAt(17, 1.0, 14, 14, pcbTop + 0.5, 13);
+  mesh(sub, new THREE.MeshStandardMaterial({ color: 0x1d3f6e, roughness: 0.45 }), gInside, 'modulo_DSP_substrato');
+  const frameGeos = [boxAt(17, 1.8, 0.3, 14, pcbTop + 1.9, 6.15), boxAt(17, 1.8, 0.3, 14, pcbTop + 1.9, 19.85), boxAt(0.3, 1.8, 14, 5.65, pcbTop + 1.9, 13), boxAt(0.3, 1.8, 14, 22.35, pcbTop + 1.9, 13)];
+  mesh(mergeGeometries(frameGeos), MAT.steel, gInside, 'schermo_RF_DSP');
+}
+const dsp = chipPackage(8, 8, 1.1, 12, 12.5, ['DSP', 'LOCK-IN AMP', 'FIR · IIR FILTER'], 'DSP_LockIn', { lift: 1.0, pins: 8 });
+const afe = chipPackage(6, 6, 0.9, 33, 9, ['AFE', 'TIA/POT', '24-bit ADC'], 'AFE_potenziostato', { pins: 6 });
+chipPackage(3.2, 2.5, 0.8, -2, 18, ['32M'], 'quarzo', { bg: '#c9ced3' });
+// ref crystal / regulators / passives
+{
+  const r = rng(11), geosA = [], geosB = [];
+  const keep = [[-17, 0, 3, 21], [3.5, 24, 4, 22], [28, 38, 4, 14], [36, 56, -12, 12], [-52, -16, 2, 27], [-60, -48, -6, 6], [-23, -5, 20, 28], [42, 50, 15, 22]];
+  let n = 0;
+  while (n < 120) {
+    const x = PCB.x0 + 2 + r() * 108, z = PCB.z0 + 2 + r() * 52;
+    if (keep.some(([a, b, c, d]) => x > a && x < b && z > c && z < d)) continue;
+    const rot = r() > 0.5; const w = rot ? 0.5 : 1.0, d = rot ? 1.0 : 0.5;
+    (r() > 0.4 ? geosA : geosB).push(boxAt(w, 0.5, d, x, pcbTop + 0.25, z)); n++;
+  }
+  mesh(mergeGeometries(geosA), new THREE.MeshStandardMaterial({ color: 0xa88b5c, roughness: 0.6 }), gInside, 'passivi');
+  mesh(mergeGeometries(geosB), MAT.black, gInside);
+  for (let i = 0; i < 2; i++) mesh(boxAt(4, 1.6, 4, -30 + i * 8, pcbTop + 0.8, -18), MAT.black, gInside, 'regolatore');
+}
+// battery
+{
+  const g = boxAt(32, 5.2, 21, -34, pcbTop + 2.6 + 0.4, 14);
+  const lab = canvasTex(1024, 672, (c, w, h) => {
+    const gr = c.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#c4ccd4'); gr.addColorStop(1, '#9aa5b0'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#2b3a48'; c.font = '600 84px "IBM Plex Mono", monospace'; c.fillText('Li-Po 3.7 V', 60, 180);
+    c.font = '56px "IBM Plex Mono", monospace'; c.fillText('1200 mAh', 60, 280);
+  });
+  const m = new THREE.MeshStandardMaterial({ color: 0xaab4be, metalness: 0.6, roughness: 0.35 });
+  mesh(g, [m, m, new THREE.MeshStandardMaterial({ map: lab, metalness: 0.4, roughness: 0.4 }), m, m, m], gInside, 'batteria_LiPo');
+}
+// USB-C receptacle (internal)
+mesh(boxAt(7.5, 3.3, 9.0, -R.W / 2 + R.t + 3.9, 6.6, 0), MAT.steel, gInside, 'USB_C_receptacle');
+// BLE LED + light pipe
+{
+  mesh(boxAt(1.6, 0.6, 0.8, LED.x, pcbTop + 0.3, LED.z), bleMat, gInside, 'LED_SMD');
+  const lp = new THREE.CylinderGeometry(1.1, 1.1, 26 - pcbTop - 0.6, 24); lp.translate(LED.x, pcbTop + 0.6 + (26 - pcbTop - 0.6) / 2, LED.z);
+  mesh(lp, new THREE.MeshPhysicalMaterial({ color: 0xcfe0ff, roughness: 0.05, transmission: 0.9, thickness: 2, emissive: 0x2b5bd6, emissiveIntensity: 0.35 }), gInside, 'light_pipe_BLE');
+}
+// cartridge connector J1: base guide + smoked top with spring fingers on the pad pitch
+{
+  const x0 = 40, x1 = 56.6, cx = (x0 + x1) / 2, w = x1 - x0;
+  mesh(boxAt(w, SLOT.y - 0.15 - pcbTop, 20, cx, pcbTop + (SLOT.y - 0.15 - pcbTop) / 2, 0), new THREE.MeshStandardMaterial({ color: 0x1b1f23, roughness: 0.5 }), gInside, 'connettore_J1');
+  mesh(boxAt(w, 1.6, 20, cx, 14.15, 0), new THREE.MeshPhysicalMaterial({ color: 0x3a4249, roughness: 0.2, transmission: 0.5, transparent: true, opacity: 0.55, thickness: 1.5 }), gInside, 'connettore_J1_coperchio');
+  mesh(boxAt(w, 1.0, 2, cx, SLOT.y + 0.35, 9), MAT.black, gInside); mesh(boxAt(w, 1.0, 2, cx, SLOT.y + 0.35, -9), MAT.black, gInside);
+  const fingers = [];
+  for (const s of [1, -1]) for (const k of ['G', 'D', 'S']) {
+    const z = s * PAD_Z[k];
+    // spring finger: angled leaf from the top cover down to the pad
+    const leaf = new THREE.BoxGeometry(5.2, 0.12, 0.7); leaf.rotateZ(-0.22); leaf.translate(47.5, 12.95, z); fingers.push(leaf);
+    const tip = new THREE.SphereGeometry(0.32, 12, 8); tip.scale(1, 0.6, 1); tip.translate(45.1, SLOT.y + 0.1, z); fingers.push(tip.toNonIndexed().index ? tip : tip);
+  }
+  // merge needs consistent index usage
+  mesh(mergeGeometries(fingers.map((g) => g.index ? g.toNonIndexed() : g)), MAT.gold, gInside, 'contatti_a_molla');
+}
+
+/* ================================================================== stage + lights */
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200), new THREE.ShadowMaterial({ opacity: 0.16 }));
+ground.rotateX(-Math.PI / 2); ground.receiveShadow = true; macro.add(ground);
+const hemi = new THREE.HemisphereLight(0xffffff, 0x8899a6, 0.55); macro.add(hemi);
+const key = new THREE.DirectionalLight(0xffffff, 2.0); key.position.set(-60, 170, 110); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048); Object.assign(key.shadow.camera, { left: -130, right: 130, top: 130, bottom: -130, near: 10, far: 500 }); key.shadow.bias = -0.0004;
+macro.add(key);
+const rim = new THREE.DirectionalLight(0xcfe2ff, 0.9); rim.position.set(140, 60, -120); macro.add(rim);
+
+macro.traverse((o) => { if (o.isMesh && o !== ground) { const tr = [].concat(o.material).some((m) => m.transparent || m.transmission > 0 || m.side === THREE.BackSide); o.castShadow = !tr && !o.userData.noShadow && !o.userData.section; o.receiveShadow = !o.userData.section; } });
+
+/* ================================================================== NANO SCENE (units: Å) */
+const nano = new THREE.Group(); nano.name = 'GraHeaL_nanoscala'; nanoScene.add(nano);
+nanoScene.add(new THREE.HemisphereLight(0xffffff, 0x667788, 0.6));
+const nKey = new THREE.DirectionalLight(0xffffff, 1.8); nKey.position.set(40, 90, 60); nanoScene.add(nKey);
+const nRim = new THREE.DirectionalLight(0xbfd8ff, 0.8); nRim.position.set(-80, 30, -60); nanoScene.add(nRim);
+
+function instanced(geo, mat, mats) {
+  const im = new THREE.InstancedMesh(geo, mat, mats.length);
+  mats.forEach((m, i) => im.setMatrixAt(i, m)); im.instanceMatrix.needsUpdate = true; return im;
+}
+const UP = new V3(0, 1, 0);
+function bondMatrix(a, b, r) {
+  const d = new V3().subVectors(b, a), len = d.length();
+  const q = new THREE.Quaternion().setFromUnitVectors(UP, d.normalize());
+  return new THREE.Matrix4().compose(new V3().addVectors(a, b).multiplyScalar(0.5), q, new V3(r, len, r));
+}
+const sphereGeo = new THREE.SphereGeometry(1, 20, 14);
+const cylGeo = new THREE.CylinderGeometry(1, 1, 1, 10, 1);
+const atomM = (p, r) => new THREE.Matrix4().compose(p, new THREE.Quaternion(), new V3(r, r, r));
+
+// graphene lattice
+const GX = 46, GZ = 30, a = 2.46, cc = 1.42;
+{
+  const pos = new Map(), atomsM = [], bondsM = [];
+  const key = (n, m, s) => `${n},${m},${s}`;
+  for (let m = -20; m <= 20; m++) for (let n = -40; n <= 40; n++) {
+    const u = n * a + m * a / 2, v = m * (a * Math.sqrt(3) / 2);
+    const A = new V3(u, 0, v), B = new V3(u, 0, v + cc);
+    if (Math.abs(A.x) <= GX && Math.abs(A.z) <= GZ) pos.set(key(n, m, 'A'), A);
+    if (Math.abs(B.x) <= GX && Math.abs(B.z) <= GZ) pos.set(key(n, m, 'B'), B);
+  }
+  for (const p of pos.values()) atomsM.push(atomM(p, 0.4));
+  for (const [k, B] of pos) {
+    if (!k.endsWith('B')) continue; const [n, m] = k.split(',').map(Number);
+    for (const nb of [key(n, m, 'A'), key(n, m + 1, 'A'), key(n - 1, m + 1, 'A')]) { const A = pos.get(nb); if (A) bondsM.push(bondMatrix(B, A, 0.17)); }
+  }
+  const gMat = new THREE.MeshStandardMaterial({ color: 0x3b434b, metalness: 0.45, roughness: 0.32 });
+  const ga = instanced(sphereGeo, gMat, atomsM); ga.name = 'grafene_atomi_C'; nano.add(ga);
+  const gb = instanced(cylGeo, gMat, bondsM); gb.name = 'grafene_legami_CC'; nano.add(gb);
+  // substrate slab
+  const sub = mesh(boxAt(GX * 2 + 14, 5, GZ * 2 + 10, 0, -3.3, 0), new THREE.MeshPhysicalMaterial({ color: 0xe9d9b4, roughness: 0.5, transmission: 0.3, thickness: 4 }), nano, 'substrato_PLA');
+  // Au/Cr contact at both ends (source, drain)
+  for (const s of [-1, 1]) {
+    mesh(boxAt(12, 1.2, GZ * 2 + 6, s * (GX - 2), 1.2, 0), MAT.chrome, nano, s < 0 ? 'Cr_source' : 'Cr_drain');
+    mesh(boxAt(12, 7, GZ * 2 + 6, s * (GX - 2), 5.3, 0), MAT.gold, nano, s < 0 ? 'Au_source' : 'Au_drain');
+  }
+}
+
+// molecules: PBASE + aptamers
+const EL = { C: { c: 0x9aa5ae, r: 0.55 }, O: { c: 0xe0453a, r: 0.6 }, N: { c: 0x3d6fe0, r: 0.6 }, P: { c: 0xf29b38, r: 0.85 } };
+const atomsBy = { C: [], O: [], N: [], P: [] }, molBonds = [];
+const at = (el, p) => { atomsBy[el].push(p.clone()); return p; };
+const bd = (p, q) => molBonds.push([p.clone(), q.clone()]);
+const aptamerGroups = [];
+let aptExtent = null;
+
+function pyrene(cx, cz, rot) {
+  const centers = [[0, 0], [a, 0], [a / 2, 1.5 * cc], [a / 2, -1.5 * cc]];
+  const pts = [];
+  for (const [hx, hz] of centers) for (let k = 0; k < 6; k++) {
+    const ang = Math.PI / 6 + k * Math.PI / 3; const p = new V2(hx + cc * Math.cos(ang) - a / 2, hz + cc * Math.sin(ang));
+    if (!pts.some((q) => q.distanceTo(p) < 0.3)) pts.push(p);
+  }
+  const c = Math.cos(rot), s = Math.sin(rot);
+  const P = pts.map((p) => new V3(cx + p.x * c - p.y * s, 3.4, cz + p.x * s + p.y * c));
+  P.forEach((p) => at('C', p));
+  for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) if (P[i].distanceTo(P[j]) < 1.6) bd(P[i], P[j]);
+  // attachment atom: farthest along rotated +x
+  const dir = new V3(c, 0, s); let best = P[0];
+  for (const p of P) if (p.clone().sub(new V3(cx, 3.4, cz)).dot(dir) > best.clone().sub(new V3(cx, 3.4, cz)).dot(dir)) best = p;
+  return { att: best, dir };
+}
+function zig(start, n, dir, el = 'C') {
+  const pts = []; let p = start.clone();
+  for (let i = 0; i < n; i++) { const q = p.clone().add(new V3(0, 1.25, 0)).addScaledVector(dir, i % 2 ? -0.72 : 0.72); at(el, q); bd(p, q); pts.push(q); p = q; }
+  return pts;
+}
+function pbase(cx, cz, rot, coupled, bases) {
+  const { att, dir } = pyrene(cx, cz, rot);
+  const side = new V3().crossVectors(dir, UP).normalize();
+  const c0 = att.clone().addScaledVector(dir, 1.0).add(new V3(0, 0.95, 0)); at('C', c0); bd(att, c0);
+  const chain = zig(c0, 3, dir); let top = chain[chain.length - 1];
+  const O1 = top.clone().addScaledVector(side, 1.2).add(new V3(0, 0.3, 0)); at('O', O1); bd(top, O1);
+  if (!coupled) {
+    const Oe = top.clone().add(new V3(0, 1.3, 0)).addScaledVector(dir, 0.5); at('O', Oe); bd(top, Oe);
+    const N = Oe.clone().add(new V3(0, 1.35, 0)); at('N', N); bd(Oe, N);
+    const ctr = N.clone().add(new V3(0, 1.2, 0)); const ring = [N];
+    for (let k = 1; k < 5; k++) { const ang = -Math.PI / 2 + k * 2 * Math.PI / 5; const p = ctr.clone().addScaledVector(side, 1.2 * Math.cos(ang)).add(new V3(0, 1.2 * Math.sin(ang), 0)); at('C', p); ring.push(p); }
+    for (let k = 0; k < 5; k++) bd(ring[k], ring[(k + 1) % 5]);
+    for (const k of [1, 4]) { const o = ring[k].clone().sub(ctr).normalize().multiplyScalar(1.2).add(ring[k]); at('O', o); bd(ring[k], o); }
+    return { top: ctr };
+  }
+  const Nam = top.clone().add(new V3(0, 1.3, 0)).addScaledVector(dir, 0.4); at('N', Nam); bd(top, Nam);
+  const link = zig(Nam, 6, dir); const lt = link[link.length - 1];
+  const P = lt.clone().add(new V3(0, 1.5, 0)); at('P', P); bd(lt, P);
+  for (const s2 of [1, -1]) { const o = P.clone().addScaledVector(side, s2 * 1.4); at('O', o); bd(P, o); }
+  return { top: P, aptamer: aptamer(P.clone().add(new V3(0, 1.0, 0)), rot, bases) };
+}
+// compact ssDNA stem-loop aptamer (< 2 nm)
+const BASECOL = { A: 0x2bb39a, T: 0xf2b134, G: 0x5b5bd6, C: 0xe5677a };
+function aptamer(B, rot, seq) {
+  const g = new THREE.Group(); g.name = 'aptamero_ssDNA'; nano.add(g);
+  const r = 5.6, rise = 3.3, nbp = 4, tw = THREE.MathUtils.degToRad(34);
+  const axis = B.clone().add(new V3(-r * Math.cos(rot), 0, -r * Math.sin(rot)));
+  const node = (ang, y) => axis.clone().add(new V3(r * Math.cos(ang), y, r * Math.sin(ang)));
+  const s1 = [], s2 = [];
+  for (let i = 0; i < nbp; i++) { s1.push(node(rot + i * tw, 0.4 + i * rise)); s2.push(node(rot + i * tw + Math.PI * 0.82, 0.4 + i * rise)); }
+  const topY = 0.4 + (nbp - 1) * rise;
+  const loop = [];
+  for (let k = 1; k <= 4; k++) { const f = k / 5; const ang = rot + (nbp - 1) * tw + f * Math.PI * 0.82; loop.push(axis.clone().add(new V3((r + 1.4) * Math.cos(ang), topY + 2.4 + Math.sin(f * Math.PI) * 2.2, (r + 1.4) * Math.sin(ang)))); }
+  const path = [...s1, ...loop, ...s2.slice().reverse()];
+  const curve = new THREE.CatmullRomCurve3(path, false, 'catmullrom', 0.4);
+  mesh(new THREE.TubeGeometry(curve, 120, 0.55, 10), new THREE.MeshStandardMaterial({ color: 0xe9a35b, roughness: 0.35 }), g, 'backbone_zucchero_fosfato');
+  const pm = path.map((p) => atomM(p, 0.85)); g.add(instanced(sphereGeo, new THREE.MeshStandardMaterial({ color: EL.P.c, roughness: 0.3 }), pm));
+  const slab = new THREE.BoxGeometry(2.2, 0.7, 1);
+  const addBase = (from, to, letter) => {
+    const len = from.distanceTo(to); const m = mesh(slab, new THREE.MeshStandardMaterial({ color: BASECOL[letter], roughness: 0.4 }), g);
+    m.position.copy(from).add(to).multiplyScalar(0.5); m.scale.z = len; m.lookAt(to);
+  };
+  const pairs = { A: 'T', T: 'A', G: 'C', C: 'G' };
+  for (let i = 0; i < nbp; i++) {
+    const mid = s1[i].clone().add(s2[i]).multiplyScalar(0.5);
+    addBase(s1[i], mid, seq[i]); addBase(s2[i], mid, pairs[seq[i]]);
+  }
+  loop.forEach((p, k) => { const inward = axis.clone().setY(p.y).sub(p).normalize(); addBase(p, p.clone().addScaledVector(inward, 2.6), 'GATC'[k]); });
+  g.updateMatrixWorld(true);
+  const bb = new THREE.Box3().setFromObject(g);
+  aptamerGroups.push({ g, bb, top: new V3(axis.x, bb.max.y, axis.z), axis });
+  return { g, bb, axis };
+}
+const sites = [
+  [-22, -10, 0, true, 'GCAT'], [-8, 12, Math.PI / 3, true, 'GGTC'], [8, -14, Math.PI, false], [20, 8, -Math.PI / 3, true, 'CGAT'],
+  [-26, 14, Math.PI * 2 / 3, false], [28, -16, Math.PI / 3, true, 'GACT'], [0, -2, -Math.PI * 2 / 3, false], [-34, -2, Math.PI / 3, false],
+];
+const pb = sites.map(([x, z, r, cpl, seq]) => pbase(x, z, r, cpl, seq || 'GCAT'));
+for (const [el, list] of Object.entries(atomsBy)) {
+  const im = instanced(sphereGeo, new THREE.MeshStandardMaterial({ color: EL[el].c, roughness: 0.35 }), list.map((p) => atomM(p, EL[el].r)));
+  im.name = 'atomi_' + el; nano.add(im);
+}
+const mb = instanced(cylGeo, new THREE.MeshStandardMaterial({ color: 0xd9dee2, roughness: 0.4 }), molBonds.map(([p, q]) => bondMatrix(p, q, 0.2)));
+mb.name = 'legami_molecolari'; nano.add(mb);
+
+// target biomarkers: one bound in the aptamer pocket, others free in the plasma
+function blob(r, seed, color) {
+  const g = new THREE.IcosahedronGeometry(r, 5), p = g.attributes.position, v = new V3(), rr = rng(seed);
+  const f = [rr() * 6, rr() * 6, rr() * 6];
+  for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).normalize(); const n = 1 + 0.12 * Math.sin(v.x * 3 + f[0]) * Math.sin(v.y * 4 + f[1]) + 0.08 * Math.sin(v.z * 5 + f[2]); p.setXYZ(i, v.x * r * n, v.y * r * n, v.z * r * n); }
+  g.computeVertexNormals();
+  return new THREE.Mesh(g, new THREE.MeshPhysicalMaterial({ color, roughness: 0.45, transmission: 0.25, thickness: 3, clearcoat: 0.3 }));
+}
+const bound = blob(3.0, 9, 0x9b7fd1); bound.name = 'biomarcatore_legato';
+const apt0 = aptamerGroups[0]; bound.position.copy(apt0.top).add(new V3(0, 2.2, 0)); nano.add(bound);
+const freeTargets = [[-6, 44, -6, 6.5, 1], [24, 52, 10, 7.5, 2], [-30, 48, 14, 5.5, 3]].map(([x, y, z, r, s]) => { const b = blob(r, s, 0x9b7fd1); b.position.set(x, y, z); b.userData.y0 = y; b.name = 'biomarcatore_libero'; nano.add(b); return b; });
+
+// dimension marker next to one aptamer
+const dimApt = aptamerGroups[1];
+const dimH = dimApt.bb.max.y - dimApt.bb.min.y;
+const dimW = Math.max(dimApt.bb.max.x - dimApt.bb.min.x, dimApt.bb.max.z - dimApt.bb.min.z);
+{
+  const x = dimApt.bb.max.x + 3, z = (dimApt.bb.min.z + dimApt.bb.max.z) / 2, y0 = dimApt.bb.min.y, y1 = dimApt.bb.max.y;
+  const lm = new THREE.LineBasicMaterial({ color: 0xc8962e });
+  const pts = [new V3(x, y0, z), new V3(x, y1, z), new V3(x - 1.2, y0, z), new V3(x + 1.2, y0, z), new V3(x - 1.2, y1, z), new V3(x + 1.2, y1, z)];
+  const lg = new THREE.BufferGeometry().setFromPoints(pts); lg.setIndex([0, 1, 2, 3, 4, 5]);
+  nano.add(new THREE.LineSegments(lg, lm));
+  // 1 nm scale bar on the lattice
+  const sb = new THREE.BufferGeometry().setFromPoints([new V3(-20, 0.8, GZ + 2), new V3(-10, 0.8, GZ + 2)]);
+  nano.add(new THREE.Line(sb, new THREE.LineBasicMaterial({ color: 0xc8962e })));
+  mesh(boxAt(10, 0.5, 0.6, -15, 0.8, GZ + 2), new THREE.MeshBasicMaterial({ color: 0xc8962e }), nano);
+}
+
+/* ================================================================== labels */
+const chipPt = (layer, x, y, z) => () => layers[layer].localToWorld(new V3(x, y + bendY(x, chipState.bend), z));
+const W = (x, y, z, grp) => () => (grp ? grp.localToWorld(new V3(x, y, z)) : new V3(x, y, z));
+addLabel('Lettore PoC portatile', 'uso al letto del paziente', 'assembled', W(-40, 26.5, -26, gTop));
+addLabel('Display di stato', 'misura in tempo reale', ['assembled'], W(-30, 26.4, 8, gTop));
+addLabel('Slot di precisione', '6 contatti a molla Au', ['assembled'], W(60.4, 13.4, -8.5, gBand), { occlude: true });
+addLabel('Indicatore BLE', 'Bluetooth Low Energy', ['assembled', 'cut'], W(LED.x, 26.6, LED.z - 0.1, gTop), { occlude: false });
+addLabel('Porta USB-C', 'ricarica · dati', ['assembled', 'cut'], W(-60.3, 6.6, 3.5, gBottom), { occlude: true, left: true });
+addLabel('Cartuccia monouso', 'chip GFET flessibile', 'assembled', chipPt(0, 37, 0, 6.6));
+addLabel('Area di inoculo', '1 goccia di sangue', ['assembled', 'chip'], chipPt(6, 35, 1.4, -2.5));
+
+addLabel('Substrato biopolimerico', 'PLA o cellulosa, flessibile', 'chip', chipPt(0, 3, -0.1, -7));
+addLabel('Canale GFET attivo', 'grafene + PBASE/aptameri', 'chip', chipPt(1, 25, 0.05, 3.2));
+addLabel('Canale di riferimento', 'grafene passivato', 'chip', chipPt(4, 25, 0.12, -3.2));
+addLabel('Source · Au/Cr', '', 'chip', chipPt(3, 22, 0.05, 2.2), { left: true });
+addLabel('Drain · Au/Cr', '', 'chip', chipPt(3, 28, 0.05, 2.2));
+addLabel('Gate · Au/Cr', 'gate complanare', 'chip', chipPt(3, 26.5, 0.05, 5.5));
+addLabel('Contatti al lettore', 'S · D · G ×2', 'chip', chipPt(3, 3.5, 0.05, 0.5), { left: true });
+addLabel('Canale microfluidico', 'coperchio trasparente', 'chip', chipPt(6, 31.5, 0.62, -3.2));
+
+addLabel('SoC Microcontrollore', 'MCU + radio BLE integrata', 'cut', W(-9, pcbTop + 1.1, 12, gInside));
+addLabel('Modulo DSP', 'filtri + amplificatore lock-in', 'cut', W(12, pcbTop + 2.2, 15, gInside));
+addLabel('AFE amperometrico/potenziometrico', 'TIA · ADC 24 bit', 'cut', W(33, pcbTop + 1, 9, gInside));
+addLabel('Connettore cartuccia J1', 'molle sui pad S/D/G', 'cut', W(48, 15, 1, gInside));
+addLabel('Batteria Li-Po', '', 'cut', W(-34, pcbTop + 6, 18, gInside), { left: true });
+addLabel('Antenna BLE 2.4 GHz', 'meandro su PCB', 'cut', W(-14, pcbTop + 0.1, 24, gInside));
+
+addLabel('Grafene monostrato', 'reticolo esagonale sp² · C–C 0,142 nm', 'nano', W(20, 0.6, 16, nano));
+addLabel('Linker PBASE', 'pirene impilato π–π a 0,34 nm', 'nano', () => { const s = sites[2]; return new V3(s[0], 4, s[1]); });
+addLabel('Estere NHS', 'PBASE non ancora accoppiato', 'nano', () => { const s = sites[4]; return pb[4].top.clone(); });
+addLabel(`Aptamero ssDNA · ${(dimH / 10).toFixed(1)} × ${(dimW / 10).toFixed(1)} nm`, 'recettore ultracompatto < 2 nm', 'nano', () => new V3(dimApt.bb.max.x + 3.5, (dimApt.bb.min.y + dimApt.bb.max.y) / 2, (dimApt.bb.min.z + dimApt.bb.max.z) / 2));
+addLabel('Biomarcatore legato', '', 'nano', () => bound.position.clone().add(new V3(3, 1, 0)));
+addLabel('Biomarcatore libero', 'nel plasma', 'nano', () => freeTargets[1].position.clone().add(new V3(7, 0, 0)));
+addLabel('Elettrodo Source Au/Cr', '', 'nano', W(-GX + 2, 9, -GZ, nano), { left: true });
+addLabel('1 nm', '', 'nano', W(-15, 1.2, GZ + 3.5, nano));
+
+/* ================================================================== display UI (canvas) */
+const disp = { state: 'ready', t0: 0, p: 0, last: 0 };
+function drawDisplay(now) {
+  const c = dispCanvasTex.userData.ctx, w = 1000, h = 760;
+  c.fillStyle = '#061015'; c.fillRect(0, 0, w, h);
+  c.fillStyle = '#e8eef1'; c.font = '700 54px Archivo, Arial, sans-serif'; c.textBaseline = 'middle';
+  c.fillText('GraHeaL', 40, 60);
+  // BLE + battery
+  const ble = disp.state === 'acq' ? (Math.sin(now / 150) > 0 ? '#5d95ff' : '#20406f') : '#5d95ff';
+  c.strokeStyle = ble; c.lineWidth = 7; c.lineJoin = 'round'; const bx = 820, by = 60, s = 18;
+  c.beginPath(); c.moveTo(bx - s * .7, by - s * .7); c.lineTo(bx + s * .7, by + s * .7); c.lineTo(bx, by + s * 1.4); c.lineTo(bx, by - s * 1.4); c.lineTo(bx + s * .7, by - s * .7); c.lineTo(bx - s * .7, by + s * .7); c.stroke();
+  c.strokeStyle = '#a9b6bd'; c.lineWidth = 4; c.strokeRect(870, 42, 90, 38); c.fillStyle = '#5fd39b'; c.fillRect(876, 48, 64, 26); c.fillStyle = '#a9b6bd'; c.fillRect(962, 52, 8, 18);
+  c.fillStyle = '#1b2a32'; c.fillRect(40, 108, w - 80, 3);
+  const msg = { idle: 'Inserire la cartuccia', ready: 'Cartuccia GFET rilevata · inoculare 1 goccia', acq: 'Acquisizione · lock-in differenziale', done: 'Misura completata · dati inviati via BLE' }[disp.state];
+  c.fillStyle = '#c8d4da'; c.font = '500 34px "IBM Plex Sans", sans-serif'; c.fillText(msg, 40, 150);
+  // plot
+  const X0 = 70, X1 = w - 40, Y0 = 220, Y1 = 600;
+  c.strokeStyle = '#22343e'; c.lineWidth = 2;
+  for (let i = 0; i <= 4; i++) { const y = Y0 + (Y1 - Y0) * i / 4; c.beginPath(); c.moveTo(X0, y); c.lineTo(X1, y); c.stroke(); }
+  c.fillStyle = '#6e8592'; c.font = '26px "IBM Plex Mono", monospace'; c.fillText('ΔIds/I0', X0, Y0 - 24); c.fillText('t', X1 - 14, Y1 + 28);
+  const p = disp.state === 'done' ? 1 : disp.state === 'acq' ? disp.p : 0;
+  const N = Math.floor(160 * p);
+  const act = (i) => { const t = i / 160; return 0.62 / (1 + Math.exp(-(t - 0.35) * 12)) + 0.02 * Math.sin(i * 0.9) ; };
+  const ref = (i) => 0.04 + 0.018 * Math.sin(i * 0.7 + 1);
+  const Ym = (v) => Y1 - v * (Y1 - Y0) / 0.75;
+  const plot = (f, col, lw) => { if (N < 2) return; c.strokeStyle = col; c.lineWidth = lw; c.beginPath(); for (let i = 0; i < N; i++) { const x = X0 + (X1 - X0) * i / 160; i ? c.lineTo(x, Ym(f(i))) : c.moveTo(x, Ym(f(i))); } c.stroke(); };
+  plot(ref, '#5d7a8a', 4); plot(act, '#e3b456', 4); plot((i) => act(i) - ref(i) + 0.02, '#ff6b5e', 7);
+  c.font = '500 26px "IBM Plex Mono", monospace';
+  c.fillStyle = '#e3b456'; c.fillText('ATT', X0 + 10, Y1 + 50); c.fillStyle = '#5d7a8a'; c.fillText('RIF', X0 + 100, Y1 + 50); c.fillStyle = '#ff6b5e'; c.fillText('DIFF', X0 + 190, Y1 + 50);
+  if (disp.state === 'acq') { c.fillStyle = '#1b2a32'; c.fillRect(40, 690, w - 80, 22); c.fillStyle = '#e3b456'; c.fillRect(40, 690, (w - 80) * p, 22); }
+  if (disp.state === 'done') { c.fillStyle = '#e8eef1'; c.font = '700 46px "IBM Plex Mono", monospace'; c.fillText('Segnale diff. +' + (58.4).toFixed(1).replace('.', ',') + ' %', 40, 700); }
+  if (disp.state === 'idle' || disp.state === 'ready') { c.fillStyle = '#6e8592'; c.font = '28px "IBM Plex Mono", monospace'; c.fillText('f lock-in 1 kHz · Vgs sweep pronto', 40, 700); }
+  dispCanvasTex.needsUpdate = true;
+}
+
+/* ================================================================== views */
+const VIEWS = {
+  assembled: { cam: [150, 132, 214], tgt: [10, 8, 0], chipIn: true, cut: false, scene: 'macro',
+    title: 'Lettore portatile con cartuccia inserita',
+    spec: [['Formato', 'Palmare ~120 × 64 × 26 mm, uso al letto del paziente'], ['Slot', 'Fessura di precisione con 6 contatti a molla sui pad S/D/G'], ['Interfacce', 'Porta USB-C · indicatore Bluetooth Low Energy'], ['Lettura', 'Amperometrica / potenziometrica differenziale']] },
+  chip: { cam: [26, 108, 160], tgt: [0, 38, 74], chipIn: false, cut: false, scene: 'macro',
+    title: 'Chip biosensore monouso',
+    spec: [['Substrato', 'Biopolimero flessibile (PLA o cellulosa) al posto del wafer di silicio'], ['Elettrodi', 'Source, Drain e Gate in lega Au/Cr (Cr di adesione + Au)'], ['Canale', 'Grafene monostrato, reticolo esagonale'], ['Differenziale', 'Canale attivo funzionalizzato + canale di riferimento passivato'], ['Campione', 'Porta di inoculo per una singola goccia ematica']] },
+  cut: { cam: [70, 150, 170], tgt: [4, 6, 0], chipIn: true, cut: true, scene: 'macro',
+    title: 'Spaccato del lettore',
+    spec: [['SoC', 'Microcontrollore con radio BLE integrata, gestione e telemetria'], ['DSP', 'Filtraggio del segnale e amplificazione lock-in'], ['AFE', 'Front-end analogico per lettura amperometrica/potenziometrica'], ['J1', 'Connettore della cartuccia allineato al passo dei pad']] },
+  nano: { cam: [84, 66, 118], tgt: [0, 14, 0], chipIn: true, cut: false, scene: 'nano',
+    title: 'Zoom nanoscopico sul canale attivo',
+    spec: [['Grafene', 'Monostrato sp², legame C–C 0,142 nm'], ['PBASE', 'Pirene ancorato per impilamento π–π, estere NHS per il legame covalente'], ['Recettori', 'Aptameri ssDNA/RNA sotto i 2 nm, così il legame avviene entro la lunghezza di Debye'], ['Bersaglio', 'Il legame del biomarcatore sposta la conduttanza del canale']] },
+};
+const POSE = {
+  in: { pos: new V3(44, SLOT.y, 0), rot: new THREE.Euler(0, 0, 0) },
+  out: { pos: new V3(-20, 38, 74), rot: new THREE.Euler(0.55, 0, 0) },
+};
+let view = 'assembled', tween = null, cutCurrent = 1000;
+const ui = { flex: 0.55, explode: 0, sub: 'pla' };
+
+function setView(v, instant = false) {
+  view = v; const V = VIEWS[v];
+  document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
+  document.getElementById('spec').innerHTML = `<h2>${V.title}</h2><dl>${V.spec.map(([k, d]) => `<dt>${k}</dt><dd>${d}</dd>`).join('')}</dl>`;
+  const aspect = innerWidth / innerHeight;
+  const far = aspect < 0.8 ? 1.75 : aspect < 1.2 ? 1.3 : 1;
+  const tgt = new V3(...V.tgt), cam = new V3(...V.cam).sub(tgt).multiplyScalar(far).add(tgt);
+  const from = { pos: chip.position.clone(), q: chip.quaternion.clone(), bend: chipState.bend, cam: camera.position.clone(), tgt: controls.target.clone(), cut: cutCurrent > 60 ? 60 : cutCurrent };
+  const pose = V.chipIn ? POSE.in : POSE.out;
+  tween = { t: 0, dur: instant || reduceMotion ? 0 : 1.2, from, to: { pos: pose.pos.clone(), q: new THREE.Quaternion().setFromEuler(pose.rot), bend: V.chipIn ? 0 : ui.flex, cam, tgt, cut: V.cut ? -4 : 60 }, sceneSwitch: V.scene };
+  document.getElementById('flex').disabled = V.chipIn;
+  if (disp.state === 'idle' || disp.state === 'ready') disp.state = V.chipIn ? 'ready' : 'idle';
+}
+const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+let activeScene = macro;
+function stepTween(dt) {
+  if (!tween) return;
+  tween.t = tween.dur ? Math.min(1, tween.t + dt / tween.dur) : 1;
+  const k = ease(tween.t), { from, to } = tween;
+  // scene switches halfway (or immediately for nano)
+  if (tween.sceneSwitch === 'nano' && activeScene !== nanoScene) { activeScene = nanoScene; from.cam = to.cam.clone().multiplyScalar(2.2); from.tgt = to.tgt.clone(); }
+  if (tween.sceneSwitch === 'macro' && activeScene !== macro) { activeScene = macro; from.cam = to.cam.clone().multiplyScalar(0.35); from.tgt = to.tgt.clone(); }
+  chip.position.lerpVectors(from.pos, to.pos, k);
+  chip.quaternion.slerpQuaternions(from.q, to.q, k);
+  chipState.bend = THREE.MathUtils.lerp(from.bend, to.bend, k);
+  camera.position.lerpVectors(from.cam, to.cam, k);
+  controls.target.lerpVectors(from.tgt, to.tgt, k);
+  applyBend(chipState.bend);
+  cutCurrent = THREE.MathUtils.lerp(from.cut, to.cut, k);
+  if (tween.t >= 1) { if (to.cut >= 60) cutCurrent = 1000; tween = null; }
+  cutPlaneTop.constant = cutPlaneZ2.constant = cutCurrent;
+}
+
+function applyExplode() {
+  const e = ui.explode;
+  chipState.explode = e;
+  gInside.position.y = 14 * e; gBand.position.y = 30 * e; gTop.position.y = 48 * e;
+  const V = VIEWS[view];
+  if (V.chipIn && !tween) chip.position.y = SLOT.y + 14 * e;
+  layoutChip();
+}
+function setSubstrate(s) {
+  ui.sub = s; substrate.material = s === 'pla' ? MAT.pla : MAT.cel;
+  document.querySelectorAll('[data-sub]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.sub === s)));
+}
+
+/* ---------- test sequence: drop falls, capillary fill, lock-in acquisition ---------- */
+let testT = -1;
+function startTest() {
+  testT = 0; dropState.t = 0; fluidSegs.forEach((m) => (m.material.opacity = 0));
+  disp.state = VIEWS[view].chipIn ? 'acq' : 'idle'; disp.p = 0;
+}
+function stepTest(dt) {
+  if (testT < 0) return;
+  testT += dt;
+  dropState.t = Math.min(1, testT / 0.7);
+  const fillStart = 0.8;
+  fluidSegs.forEach((m, i) => { const f = THREE.MathUtils.clamp((testT - fillStart - i * 0.45) / 0.45, 0, 1); m.material.opacity = 0.62 * f; });
+  if (VIEWS[view].chipIn || disp.state === 'acq') {
+    disp.state = 'acq'; disp.p = THREE.MathUtils.clamp((testT - 1.4) / 4.5, 0, 1);
+    if (disp.p >= 1) disp.state = 'done';
+  }
+  if (testT > 6.2) testT = -1;
+}
+
+/* ---------- UI wiring ---------- */
+document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view)));
+document.querySelectorAll('[data-sub]').forEach((b) => b.addEventListener('click', () => setSubstrate(b.dataset.sub)));
+document.getElementById('flex').addEventListener('input', (e) => { ui.flex = +e.target.value; if (!VIEWS[view].chipIn && !tween) { chipState.bend = ui.flex; applyBend(ui.flex); } });
+document.getElementById('explode').addEventListener('input', (e) => { ui.explode = +e.target.value; applyExplode(); });
+document.getElementById('opt-labels').addEventListener('change', (e) => { labelLayer.hidden = !e.target.checked; });
+document.getElementById('opt-rotate').addEventListener('change', (e) => { controls.autoRotate = e.target.checked; });
+document.getElementById('btn-test').addEventListener('click', startTest);
+const glbBtn = document.getElementById('btn-glb');
+if (window.self === window.top) glbBtn.hidden = false;
+glbBtn.addEventListener('click', async () => {
+  glbBtn.disabled = true; glbBtn.textContent = 'Esportazione…';
+  try {
+    const { GLTFExporter } = await import('three/addons/exporters/GLTFExporter.js');
+    const root = activeScene === nanoScene ? nano : new THREE.Group().add(reader.clone(), chip.clone());
+    const out = await new GLTFExporter().parseAsync(root, { binary: true });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([out], { type: 'model/gltf-binary' }));
+    a.download = activeScene === nanoScene ? 'graheal_nanoscala.glb' : 'graheal_lettore_cartuccia.glb'; a.click();
+    glbBtn.textContent = 'Esportato';
+  } catch (err) { glbBtn.textContent = 'Esportazione non riuscita'; console.error(err); }
+  setTimeout(() => { glbBtn.disabled = false; glbBtn.textContent = 'Esporta .glb'; }, 2500);
+});
+
+/* ---------- resize + render loop ---------- */
+function resize() {
+  const w = stageEl.clientWidth, h = stageEl.clientHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h;
+  const panel = document.getElementById('panel'), pr = panel.getBoundingClientRect();
+  if (w > 720) camera.setViewOffset(w, h, -(pr.right / 2), 0, w, h);
+  else camera.setViewOffset(w, h, 0, Math.min(pr.height, h * 0.44) / 2, w, h);
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+
+const ray = new THREE.Raycaster(); const tmp = new V3();
+let frame = 0;
+function updateLabels() {
+  const w = stageEl.clientWidth, h = stageEl.clientHeight;
+  const occluders = frame % 8 === 0 ? [gTop, gBand, gBottom, chip] : null;
+  for (const L of labels) {
+    const on = L.view.includes(view) && !(view !== 'nano' && activeScene === nanoScene) && !(view === 'nano' && activeScene !== nanoScene);
+    if (!on || tween) { L.el.style.display = 'none'; continue; }
+    const p = L.getPos(); tmp.copy(p).project(camera);
+    if (tmp.z > 1 || Math.abs(tmp.x) > 1.05 || Math.abs(tmp.y) > 1.05) { L.el.style.display = 'none'; continue; }
+    L.el.style.display = '';
+    const x = (tmp.x * 0.5 + 0.5) * w, y = (-tmp.y * 0.5 + 0.5) * h;
+    L.el.style.transform = L.el.classList.contains('left') ? `translate(${x - L.el.offsetWidth + 3.5}px, ${y - 9}px)` : `translate(${x - 3.5}px, ${y - 9}px)`;
+    if (occluders && L.occlude) {
+      const dir = p.clone().sub(camera.position); const dist = dir.length(); ray.set(camera.position, dir.normalize()); ray.far = dist - 1.0;
+      const hit = ray.intersectObjects(occluders, true).find((i) => !i.object.userData.section && i.object.visible);
+      L.el.classList.toggle('dim', !!hit);
+    }
+  }
+}
+
+const clock = new THREE.Clock();
+setSubstrate('pla'); setView('assembled', true); applyExplode(); applyBend(0); layoutChip();
+function loop() {
+  const dt = Math.min(clock.getDelta(), 0.05), now = performance.now();
+  stepTween(dt); stepTest(dt);
+  layoutChip();
+  // BLE LED breathing (fast blink while transmitting)
+  const k = disp.state === 'acq' ? (Math.sin(now / 90) > 0 ? 1 : 0.1) : 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(now / 600));
+  bleMat.emissiveIntensity = 0.3 + 2.4 * k;
+  freeTargets.forEach((b, i) => { b.position.y = b.userData.y0 + Math.sin(now / 1400 + i * 2) * 2.2; b.rotation.y += dt * 0.15; });
+  if (now - disp.last > 66) { drawDisplay(now); disp.last = now; }
+  controls.update();
+  renderer.render(activeScene, camera);
+  updateLabels(); frame++;
+  requestAnimationFrame(loop);
+}
+loop();
+window.__graheal = { setView, startTest, ready: true };
+</script>
+<!--ARTIFACT-END-->
+</body>
+</html>
