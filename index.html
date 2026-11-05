@@ -886,7 +886,7 @@ function blob(r, seed, color) {
 }
 const bound = blob(3.0, 9, 0x9b7fd1); bound.name = 'biomarcatore_legato';
 const apt0 = aptamerGroups[0]; bound.position.copy(apt0.top).add(new V3(0, 2.2, 0)); nano.add(bound);
-const freeTargets = [[-6, 44, -6, 6.5, 1], [24, 52, 10, 7.5, 2], [-30, 48, 14, 5.5, 3]].map(([x, y, z, r, s]) => { const b = blob(r, s, 0x9b7fd1); b.position.set(x, y, z); b.userData.y0 = y; b.name = 'biomarcatore_libero'; nano.add(b); return b; });
+const freeTargets = [[-8, 46, -14, 4.6, 1], [26, 50, -6, 5.2, 2], [-30, 44, 4, 4.0, 3]].map(([x, y, z, r, s]) => { const b = blob(r, s, 0x9b7fd1); b.position.set(x, y, z); b.userData.y0 = y; b.name = 'biomarcatore_libero'; nano.add(b); return b; });
 
 // dimension marker next to one aptamer
 const dimApt = aptamerGroups[1];
@@ -918,8 +918,8 @@ addLabel('Area di inoculo', '1 goccia di sangue', ['assembled', 'chip'], chipPt(
 addLabel('Substrato biopolimerico', 'PLA o cellulosa, flessibile', 'chip', chipPt(0, 3, -0.1, -7));
 addLabel('Canale GFET attivo', 'grafene + PBASE/aptameri', 'chip', chipPt(1, 25, 0.05, 3.2));
 addLabel('Canale di riferimento', 'grafene passivato', 'chip', chipPt(4, 25, 0.12, -3.2));
-addLabel('Source · Au/Cr', '', 'chip', chipPt(3, 22, 0.05, 2.2), { left: true });
-addLabel('Drain · Au/Cr', '', 'chip', chipPt(3, 28, 0.05, 2.2));
+addLabel('Source · Au/Cr', '', 'chip', chipPt(3, 21.4, 0.05, 2.0), { left: true });
+addLabel('Drain · Au/Cr', '', 'chip', chipPt(3, 28.6, 0.05, 2.0));
 addLabel('Gate · Au/Cr', 'gate complanare', 'chip', chipPt(3, 26.5, 0.05, 5.5));
 addLabel('Contatti al lettore', 'S · D · G ×2', 'chip', chipPt(3, 3.5, 0.05, 0.5), { left: true });
 addLabel('Canale microfluidico', 'coperchio trasparente', 'chip', chipPt(6, 31.5, 0.62, -3.2));
@@ -980,7 +980,7 @@ const VIEWS = {
   assembled: { cam: [150, 132, 214], tgt: [10, 8, 0], chipIn: true, cut: false, scene: 'macro',
     title: 'Lettore portatile con cartuccia inserita',
     spec: [['Formato', 'Palmare ~120 × 64 × 26 mm, uso al letto del paziente'], ['Slot', 'Fessura di precisione con 6 contatti a molla sui pad S/D/G'], ['Interfacce', 'Porta USB-C · indicatore Bluetooth Low Energy'], ['Lettura', 'Amperometrica / potenziometrica differenziale']] },
-  chip: { cam: [26, 108, 160], tgt: [0, 38, 74], chipIn: false, cut: false, scene: 'macro',
+  chip: { cam: [22, 96, 172], tgt: [0, 30, 104], chipIn: false, cut: false, scene: 'macro',
     title: 'Chip biosensore monouso',
     spec: [['Substrato', 'Biopolimero flessibile (PLA o cellulosa) al posto del wafer di silicio'], ['Elettrodi', 'Source, Drain e Gate in lega Au/Cr (Cr di adesione + Au)'], ['Canale', 'Grafene monostrato, reticolo esagonale'], ['Differenziale', 'Canale attivo funzionalizzato + canale di riferimento passivato'], ['Campione', 'Porta di inoculo per una singola goccia ematica']] },
   cut: { cam: [70, 150, 170], tgt: [4, 6, 0], chipIn: true, cut: true, scene: 'macro',
@@ -992,7 +992,7 @@ const VIEWS = {
 };
 const POSE = {
   in: { pos: new V3(44, SLOT.y, 0), rot: new THREE.Euler(0, 0, 0) },
-  out: { pos: new V3(-20, 38, 74), rot: new THREE.Euler(0.55, 0, 0) },
+  out: { pos: new V3(-20, 30, 104), rot: new THREE.Euler(0.55, 0, 0) },
 };
 let view = 'assembled', tween = null, cutCurrent = 1000;
 const ui = { flex: 0.55, explode: 0, sub: 'pla' };
