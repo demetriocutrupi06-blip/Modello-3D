@@ -89,6 +89,22 @@ export function findErrorCodes(sections: Section[]): OvenProfile["errorCodes"] {
   return codes;
 }
 
+/** Sigla della modalità combinata (es. "Cb-2"): quella che compare su una riga che nomina il tipo giusto. */
+export function findPanelCode(text: string, id: ModeId): string | null {
+  const keyword = id === "combi_microwave_grill" ? /grill/i : id === "combi_microwave_convection" ? /convezione|ventilat/i : null;
+  if (!keyword) return null;
+  const other = id === "combi_microwave_grill" ? /convezione|ventilat/i : /grill/i;
+  const found: { code: string; line: string }[] = [];
+  for (const line of text.split("\n")) {
+    for (const m of line.matchAll(/\b(Cb-?\d|Combi\s?\d)\b/gi)) found.push({ code: m[1], line });
+  }
+  // 1) una riga che nomina la sigla e il tipo giusto; 2) una sigla mai associata all'altro tipo
+  const direct = found.find((f) => keyword.test(f.line) && !other.test(f.line));
+  if (direct) return direct.code;
+  const otherCodes = new Set(found.filter((f) => other.test(f.line)).map((f) => f.code));
+  return found.find((f) => !otherCodes.has(f.code))?.code ?? null;
+}
+
 export function findModes(sections: Section[], maxOutput: number | null, levels: number[]): OvenProfile["modes"] {
   const modes: OvenProfile["modes"] = [
     {
@@ -109,7 +125,7 @@ export function findModes(sections: Section[], maxOutput: number | null, levels:
     modes.push({
       id: k.id,
       name: k.name,
-      panelCode: /\b(Cb-\d)\b/.exec(s.text)?.[1] ?? null,
+      panelCode: findPanelCode(s.text, k.id),
       microwaveWatts: isCombi ? levels.filter((w) => maxOutput === null || w < maxOutput) : [],
       temperatureC: null,
       preheatRequired: null,

@@ -5,9 +5,9 @@ export const dynamic = "force-dynamic";
 
 const FEATURES: { name: string; phase: number; done: boolean }[] = [
   { name: "Caricamento del manuale e profilo forno", phase: 1, done: true },
-  { name: "Adattamento della ricetta", phase: 2, done: false },
-  { name: "Convertitore di potenza", phase: 2, done: false },
-  { name: "Scalare le porzioni", phase: 2, done: false },
+  { name: "Adattamento della ricetta", phase: 2, done: true },
+  { name: "Convertitore di potenza", phase: 2, done: true },
+  { name: "Scalare le porzioni", phase: 2, done: true },
   { name: "Modalità cucina con timer e voce", phase: 3, done: false },
   { name: "Suggerimenti, avanzi, controllo contenitori", phase: 4, done: false },
   { name: "Diario di cottura e assistente del manuale", phase: 5, done: false },
@@ -30,13 +30,23 @@ export default async function Home() {
       </section>
 
       {active ? (
-        <Link href={`/forni/${active.id}`} className="card block hover:border-brand-500">
-          <div className="text-sm text-stone-500">Forno attivo</div>
-          <div className="text-lg font-semibold">{active.nickname}</div>
-          <div className="text-sm text-stone-500">
-            {active.brand} {active.model}
+        <>
+          <Link href={`/forni/${active.id}`} className="card block hover:border-brand-500">
+            <div className="text-sm text-stone-500">Forno attivo</div>
+            <div className="text-lg font-semibold">{active.nickname}</div>
+            <div className="text-sm text-stone-500">
+              {active.brand} {active.model}
+            </div>
+          </Link>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Link href="/ricette/nuova" className="btn-primary">
+              Adatta una ricetta
+            </Link>
+            <Link href="/strumenti/potenza" className="btn-secondary">
+              Converti potenza e tempo
+            </Link>
           </div>
-        </Link>
+        </>
       ) : (
         <div className="card">
           <p className="mb-3">Non hai ancora un forno configurato.</p>

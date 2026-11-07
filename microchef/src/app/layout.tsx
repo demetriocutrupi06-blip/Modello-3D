@@ -27,8 +27,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               MicroChef
             </Link>
             <div className="flex gap-4 text-sm font-medium">
+              <Link href="/ricette" className="hover:text-brand-600">
+                Ricette
+              </Link>
+              <Link href="/strumenti/potenza" className="hover:text-brand-600">
+                Potenza
+              </Link>
               <Link href="/forni" className="hover:text-brand-600">
-                I miei forni
+                Forni
               </Link>
             </div>
           </nav>

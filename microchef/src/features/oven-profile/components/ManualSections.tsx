@@ -1,3 +1,5 @@
+import { OpenHashDetails } from "@/components/OpenHashDetails";
+
 const SOURCE_LABEL: Record<string, string> = {
   pdf_text: "testo del PDF",
   pdf_ocr: "PDF scansionato, trascritto",
@@ -12,6 +14,7 @@ export function ManualSections(props: {
 }) {
   return (
     <section className="card">
+      <OpenHashDetails />
       <h2 className="text-lg font-semibold">Testo del manuale</h2>
       <p className="mb-3 text-sm text-stone-500">
         {props.fileName} · {props.pageCount} pagine · {SOURCE_LABEL[props.source] ?? props.source} · {props.sections.length} sezioni

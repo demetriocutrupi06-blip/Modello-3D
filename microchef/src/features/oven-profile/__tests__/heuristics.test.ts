@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findAbsorbed, findCapacity, findErrorCodes, findMaxOutput, findPowerLevels, prefillProfile } from "../heuristics";
+import { findPanelCode, findAbsorbed, findCapacity, findErrorCodes, findMaxOutput, findPowerLevels, prefillProfile } from "../heuristics";
 
 // testo sintetico con la stessa forma del manuale Samsung MC28H5015AW
 const sections = [
@@ -53,6 +53,13 @@ describe("pre-compilazione senza IA", () => {
     const extra = [{ id: "p5-x", title: "Uso", text: "Potenza microonde 600 W consigliata per i liquidi." }, ...sections];
     expect(prefillProfile(extra).maxOutputWatts).toBe(900);
     expect(findMaxOutput("Potenza microonde 600 W")).toBeNull();
+  });
+
+  it("sceglie la sigla della combinata giusta quando ne compaiono più di una", () => {
+    expect(findPanelCode("Cb-1 (Microonde + Grill)\nCb-2 (Microonde + Convezione)", "combi_microwave_convection")).toBe("Cb-2");
+    expect(findPanelCode("Cb-1 (Microonde + Grill)\nCb-2 (Microonde + Convezione)", "combi_microwave_grill")).toBe("Cb-1");
+    expect(findPanelCode("Cb-1 (Microonde + Grill)\n2. Quando compare la sigla Cb-2 premere Select", "combi_microwave_convection")).toBe("Cb-2");
+    expect(findPanelCode("nessuna sigla", "combi_microwave_grill")).toBeNull();
   });
 
   it("usa il modello indicato dall'utente e non inventa dati assenti", () => {

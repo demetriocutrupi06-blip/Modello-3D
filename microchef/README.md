@@ -34,9 +34,9 @@ ad esempio pubblicandola su Vercel. In locale, sul computer, il browser la consi
 | # | Funzionalità | Stato |
 |---|---|---|
 | 1 | Caricamento del manuale e profilo forno | ✅ Fase 1 |
-| 2 | Adattamento della ricetta | Fase 2 |
-| 4 | Convertitore di potenza | Fase 2 |
-| 5 | Scalare le porzioni | Fase 2 |
+| 2 | Adattamento della ricetta (gratis con regole, oppure con Claude) | ✅ Fase 2 |
+| 4 | Convertitore di potenza | ✅ Fase 2 |
+| 5 | Scalare le porzioni | ✅ Fase 2 |
 | 8 | Modalità cucina (timer, voce, schermo acceso) | Fase 3 |
 | 3, 6, 7 | Suggerimenti, avanzi, controllo contenitori | Fase 4 |
 | 9, 11 | Diario di cottura, assistente del manuale | Fase 5 |
@@ -83,6 +83,57 @@ protetto da copyright):
 MANUAL_PDF=/percorso/del/manuale.pdf npm test
 ```
 
+### Fase 2: ricette, convertitore di potenza, porzioni
+
+**Convertitore di potenza** (`/strumenti/potenza`, codice in `src/features/power-converter/logic.ts`)
+- Formula a energia costante: `t₂ = t₁ × P₁ / P₂`. Il livello scelto è quello del forno più vicino alla potenza
+  originale (a parità, il più alto), oppure quello indicato dall'utente.
+- Arrotondamento: sotto il minuto a 5 s, fino a 5 minuti a 10 s, oltre a 30 s.
+- Legge anche un testo libero come un'etichetta: "Riscaldare 3 min a 750 W", "2'30\"", "3-4 minuti a 650 W".
+- Mostra sempre l'avviso di controllare la cottura, più avvisi per potenze molto diverse dall'originale.
+
+**Porzioni** (`src/features/portions/logic.ts`)
+- Ingredienti proporzionali, con arrotondamenti da cucina (grammi a 5 o 10, pezzi a ½, cucchiai a ¼) e
+  riconoscimento di formati come "200 g di farina", "Farina 00 200 g", "1/2 cucchiaino", "2-3 patate".
+- Tempi **non lineari**: `t₂ = t₁ × r^0,65` (r = porzioni nuove / originali). Dose doppia → × 1,57, metà → × 0,64.
+  Si applica ai passaggi al microonde; in convezione e grill il tempo dipende soprattutto dallo spessore e resta uguale.
+  Sopra ×4 o sotto ×0,25 compare un avviso, e sempre il promemoria di controllare a metà cottura.
+
+**Adattamento della ricetta** (`/ricette/nuova`)
+- Input: testo incollato, link a una pagina (dati strutturati schema.org, oppure il testo dell'articolo) o foto (OCR).
+  Il testo estratto si può correggere prima di adattarlo.
+- **Gratis** (`src/features/recipe-adapt/free-adapter.ts`): riconosce il tipo di cottura di ogni passaggio
+  (`detect.ts`) e lo traduce nelle modalità che il forno ha davvero:
+
+  | Ricetta | Sul tuo forno |
+  |---|---|
+  | Forno tradizionale | Convezione, stessa temperatura e stesso tempo, preriscaldato (alternativa: combinato con tempo × 0,6) |
+  | Gratinare | Grill, stesso tempo (5 min se non indicato) |
+  | Padella, rosolare | Crisp se presente, altrimenti microonde + grill, altrimenti microonde (senza doratura) |
+  | Stufare, sobbollire | Microonde a ⅔ della potenza, tempo × 0,7, coperto, liquidi −20% |
+  | Lessare pasta o riso | Microonde alla massima potenza, tempo × 1,25, acqua abbondante |
+  | Lessare verdure | Microonde alla massima potenza, tempo × 0,5, poca acqua, coperto |
+  | Vapore | Recipiente vapore se presente, massima potenza, tempo × 0,8 |
+  | Già per microonde (es. 750 W) | Convertitore di potenza |
+  | Sciogliere burro o cioccolato | Metà potenza, a intervalli di 30 s |
+  | Friggere | Non coperto: lo dichiara (e propone il crisp, se c'è) |
+
+  Ogni passaggio indica se l'impostazione viene **dal manuale** (con la sezione citata), da una **regola generale**,
+  oppure se **non è coperta**. La fattibilità (si può fare / in parte / sconsigliato) deriva da questo.
+- **Con Claude** (`ai-adapter.ts`, solo con la chiave API): riceve il profilo, le sezioni del manuale più pertinenti
+  (ricerca BM25 in `src/lib/retrieval/bm25.ts`) e la ricetta; la risposta è validata con zod (modalità esistenti,
+  citazioni reali) e poi il codice riporta potenze e tempi ai livelli reali del forno.
+- Nella pagina della ricetta si cambiano le porzioni con − e +; le citazioni 📖 aprono la sezione del manuale.
+
+### Come provare la Fase 2
+
+1. **Convertitore**: menu *Potenza*, scrivi "Riscaldare 3 min a 750 W" e controlla il risultato
+   (sul Samsung: 2 min 30 s a ALTO, 900 W). Prova anche a scegliere un livello diverso.
+2. **Ricetta**: menu *Ricette* → *+ Adatta*, incolla una ricetta con ingredienti e procedimento, lascia *Gratis* e
+   premi *Adatta al mio forno*. Controlla per ogni passaggio modalità, potenza, tempo e citazioni.
+3. **Porzioni**: nella ricetta premi + e −: cambiano le quantità e i tempi dei passaggi al microonde.
+4. **Link e foto**: prova con l'indirizzo di una ricetta online, oppure con la foto di una ricetta o di un'etichetta.
+
 ## Struttura
 
 ```
@@ -98,7 +149,10 @@ microchef/
     │   ├── llm/                  client Anthropic, output JSON validato con zod e riprova
     │   └── db.ts                 client Prisma
     └── features/
-        └── oven-profile/         schema del profilo, estrazione, caricamento, componenti, test
+        ├── oven-profile/         schema del profilo, estrazione (Claude o regole), caricamento, componenti
+        ├── power-converter/      convertitore di potenza (funzioni pure + pagina)
+        ├── portions/             porzioni: ingredienti e tempi (funzioni pure)
+        └── recipe-adapt/         lettura ricette, riconoscimento cotture, adattamento gratis e con Claude
 ```
 
 Ogni funzionalità avrà la sua cartella in `src/features/` con schema, logica, parte server, componenti e test.
@@ -111,4 +165,5 @@ Ogni funzionalità avrà la sua cartella in `src/features/` con schema, logica, 
   `src/lib/llm/client.ts`.
 - Le funzioni che chiamano il modello ricevono la chiamata come parametro (`LlmCall`): nei test viene sostituita
   da una finta, quindi i test non usano la rete né la chiave.
-- I calcoli numerici delle fasi successive (potenza, porzioni, diario, consumi) saranno funzioni TypeScript pure, con test.
+- Tutti i calcoli numerici (potenza, porzioni, arrotondamenti) sono funzioni TypeScript pure, con test; anche
+  nella versione con Claude i numeri finali li calcola il codice.
