@@ -6,7 +6,8 @@ import { extractPdfPages } from "@/lib/ingest/pdf";
 import { ocrImages } from "@/lib/ingest/ocr";
 import { transcribeScannedPdf } from "@/lib/ingest/scanned-pdf";
 import { extractOvenProfile } from "./extract";
-import { parseManual, type IngestDeps, type UploadedFile } from "./ingest";
+import { prefillProfile } from "./heuristics";
+import { IngestError, parseManual, type IngestDeps, type UploadedFile } from "./ingest";
 import { OvenProfile, normalizeProfile } from "./schema";
 
 const deps: IngestDeps = {
@@ -15,10 +16,33 @@ const deps: IngestDeps = {
   transcribeScannedPdf: (data, pageCount) => transcribeScannedPdf(anthropicCall, data, pageCount),
 };
 
-/** Carica il manuale, estrae il profilo e salva il forno come "da verificare". */
-export async function createOvenFromManual(files: UploadedFile[], nickname: string, modelHint?: string) {
-  const manual = await parseManual(files, deps);
-  const profile = await extractOvenProfile({ call: anthropicCall, sections: manual.sections, modelHint });
+/** Modalità gratuita: nessuna chiamata a Claude. */
+const freeDeps: IngestDeps = {
+  ...deps,
+  transcribeScannedPdf: async () => {
+    throw new IngestError(
+      "Questo PDF è una scansione senza testo: in modalità gratuita caricalo come foto delle pagine (JPG o PNG), che verranno lette con l'OCR.",
+    );
+  },
+};
+
+export type AnalysisMode = "ai" | "free";
+
+export function hasApiKey(): boolean {
+  return Boolean(process.env.ANTHROPIC_API_KEY?.trim());
+}
+
+/**
+ * Carica il manuale, ricava il profilo e salva il forno come "da verificare".
+ * - "ai": profilo estratto da Claude (a pagamento, richiede ANTHROPIC_API_KEY);
+ * - "free": profilo pre-compilato con regole sul testo, da completare a mano.
+ */
+export async function createOvenFromManual(files: UploadedFile[], nickname: string, modelHint: string | undefined, mode: AnalysisMode) {
+  const manual = await parseManual(files, mode === "ai" ? deps : freeDeps);
+  const profile =
+    mode === "ai"
+      ? await extractOvenProfile({ call: anthropicCall, sections: manual.sections, modelHint })
+      : prefillProfile(manual.sections, modelHint);
 
   return db.oven.create({
     data: {

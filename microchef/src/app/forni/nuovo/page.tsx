@@ -1,4 +1,7 @@
 import { UploadManualForm } from "@/features/oven-profile/components/UploadManualForm";
+import { hasApiKey } from "@/features/oven-profile/server";
+
+export const dynamic = "force-dynamic";
 
 export default function NewOvenPage() {
   return (
@@ -8,7 +11,7 @@ export default function NewOvenPage() {
         Carica il manuale d&apos;uso in PDF, oppure le foto delle pagine. Dopo l&apos;analisi potrai controllare e correggere il
         profilo prima di salvarlo.
       </p>
-      <UploadManualForm />
+      <UploadManualForm hasApiKey={hasApiKey()} />
     </div>
   );
 }

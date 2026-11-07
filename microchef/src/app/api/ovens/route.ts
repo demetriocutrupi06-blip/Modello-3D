@@ -9,7 +9,7 @@ export async function GET() {
   return NextResponse.json(await listOvens());
 }
 
-/** multipart/form-data: files (PDF o immagini), nickname, modelHint */
+/** multipart/form-data: files (PDF o immagini), nickname, modelHint, mode ("ai" | "free") */
 export async function POST(req: Request) {
   try {
     const form = await req.formData();
@@ -21,7 +21,8 @@ export async function POST(req: Request) {
     );
     const nickname = String(form.get("nickname") ?? "");
     const modelHint = String(form.get("modelHint") ?? "").trim() || undefined;
-    const oven = await createOvenFromManual(files, nickname, modelHint);
+    const mode = form.get("mode") === "ai" ? "ai" : "free";
+    const oven = await createOvenFromManual(files, nickname, modelHint, mode);
     return NextResponse.json(oven, { status: 201 });
   } catch (e) {
     return errorResponse(e);

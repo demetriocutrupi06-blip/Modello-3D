@@ -10,7 +10,7 @@ Serve Node.js 20 o superiore.
 ```bash
 cd microchef
 npm install
-cp .env.example .env      # poi inserisci ANTHROPIC_API_KEY
+cp .env.example .env      # la chiave ANTHROPIC_API_KEY è facoltativa: senza, l'app usa la modalità gratuita
 npx prisma db push        # crea il database SQLite (prisma/dev.db)
 npm run dev               # http://localhost:3000
 ```
@@ -19,7 +19,7 @@ Variabili in `.env`:
 
 | Variabile | Uso |
 |---|---|
-| `ANTHROPIC_API_KEY` | chiave API, letta solo dal server (mai inviata al browser) |
+| `ANTHROPIC_API_KEY` | facoltativa. Chiave API, letta solo dal server (mai inviata al browser): abilita la lettura del manuale con Claude, a pagamento |
 | `ANTHROPIC_MODEL` | modello da usare, predefinito `claude-sonnet-5-5` (per più qualità: `claude-opus-5-5`) |
 | `ANTHROPIC_EFFORT` | `low`, `medium` o `high`: quanto il modello ragiona prima di rispondere |
 | `DATABASE_URL` | percorso del database SQLite |
@@ -52,21 +52,26 @@ ad esempio pubblicandola su Vercel. In locale, sul computer, il browser la consi
    - Foto: OCR in italiano con `tesseract.js`.
 3. **Sezioni**: il testo viene diviso in sezioni in base ai titoli in maiuscolo (`src/lib/ingest/sections.ts`).
    Ogni sezione ha un id citabile con la pagina, es. `p14-livelli-di-potenza-e-modifiche-dei-tempi`.
-4. **Profilo forno**: il modello riceve tutte le sezioni e restituisce un JSON (`src/features/oven-profile/schema.ts`)
+4. **Profilo forno, modalità gratuita** (predefinita senza chiave API): nessuna chiamata a Claude. Il profilo viene
+   pre-compilato con regole sul testo (`src/features/oven-profile/heuristics.ts`): tabella dei livelli di potenza,
+   capacità in litri, potenza resa e assorbita, codici di errore, modalità trovate nei titoli, marca e modello.
+   Il resto (programmi automatici, accessori, contenitori, avvertenze) lo completi tu, con il testo del manuale
+   consultabile nella stessa pagina. I PDF scansionati vanno caricati come foto delle pagine, lette con l'OCR.
+5. **Profilo forno, con Claude** (a pagamento, richiede la chiave): il modello riceve tutte le sezioni e restituisce un JSON (`src/features/oven-profile/schema.ts`)
    con marca, modello, capacità, livelli di potenza (W resi), potenza assorbita, modalità, programmi automatici,
    accessori, regole sui contenitori, avvertenze, risoluzione dei problemi e codici di errore.
    - La risposta è validata con zod; se non è valida, il modello riprova **una** volta ricevendo gli errori.
    - Ogni dato cita la sezione di provenienza; una citazione a una sezione inesistente conta come errore.
    - I dati mancanti restano vuoti e vengono annotati in «Note dell'estrazione», invece di essere inventati.
-5. **Verifica**: il forno viene salvato come «da verificare». Nella sua pagina puoi correggere ogni campo
+6. **Verifica**: il forno viene salvato come «da verificare». Nella sua pagina puoi correggere ogni campo
    (oppure il JSON completo), aprire la sezione del manuale citata e infine premere **Conferma e salva**.
-6. **Più forni**: puoi salvarne quanti vuoi («Casa», «Casa dei genitori») e scegliere quello attivo.
+7. **Più forni**: puoi salvarne quanti vuoi («Casa», «Casa dei genitori») e scegliere quello attivo.
 
 ### Come provare la Fase 1
 
 1. Avvia l'app con i comandi del setup e apri http://localhost:3000.
-2. Premi «Carica il manuale del tuo forno», scegli il PDF, dai un nome al forno e premi «Analizza il manuale»
-   (per un manuale di 40 pagine servono da uno a tre minuti).
+2. Premi «Carica il manuale del tuo forno», scegli il PDF, dai un nome al forno, scegli «Gratis» oppure
+   «Con Claude» e premi «Leggi il manuale». In modalità gratuita servono pochi secondi; con Claude da uno a tre minuti.
 3. Controlla il profilo: livelli di potenza, modalità (es. Cb-1 e Cb-2), accessori (la vaporiera solo a microonde),
    codici di errore. Tocca una citazione 📖 per aprire il testo del manuale da cui proviene il dato.
 4. Correggi quello che serve e premi «Conferma e salva». Il forno compare in «I miei forni» e, se è il primo, diventa attivo.

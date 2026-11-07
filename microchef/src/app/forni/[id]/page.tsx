@@ -17,8 +17,8 @@ export default async function OvenPage({ params }: { params: Promise<{ id: strin
         <div className="card border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
           <p className="font-semibold">Controlla il profilo prima di salvarlo</p>
           <p className="text-sm">
-            I dati sono stati estratti automaticamente dal manuale. Verifica soprattutto potenze, modalità e accessori: ogni dato
-            riporta la sezione del manuale da cui proviene.
+            I dati sono stati ricavati automaticamente dal manuale. Verifica soprattutto potenze, modalità e accessori, e completa
+            ciò che manca: ogni dato riporta la sezione del manuale da cui proviene, e in fondo trovi il testo completo.
           </p>
         </div>
       )}
