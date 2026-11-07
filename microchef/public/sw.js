@@ -1,6 +1,6 @@
 // Service worker minimale: rende l'app installabile e tiene in cache le risorse statiche.
 // Le chiamate /api/* passano sempre dalla rete (richiedono il server e la chiave API).
-const CACHE = "microchef-v1";
+const CACHE = "microchef-v2";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(["/", "/manifest.webmanifest", "/icons/icon.svg"])));
@@ -36,5 +36,16 @@ self.addEventListener("fetch", (event) => {
         return res;
       })
       .catch(() => caches.match(event.request).then((hit) => hit || caches.match("/"))),
+  );
+});
+
+// tocco sulla notifica del timer: riporta in primo piano l'app
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      const open = list.find((c) => "focus" in c);
+      return open ? open.focus() : self.clients.openWindow("/");
+    }),
   );
 });

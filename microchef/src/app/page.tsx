@@ -8,7 +8,7 @@ const FEATURES: { name: string; phase: number; done: boolean }[] = [
   { name: "Adattamento della ricetta", phase: 2, done: true },
   { name: "Convertitore di potenza", phase: 2, done: true },
   { name: "Scalare le porzioni", phase: 2, done: true },
-  { name: "Modalità cucina con timer e voce", phase: 3, done: false },
+  { name: "Modalità cucina con timer e voce", phase: 3, done: true },
   { name: "Suggerimenti, avanzi, controllo contenitori", phase: 4, done: false },
   { name: "Diario di cottura e assistente del manuale", phase: 5, done: false },
   { name: "Meal prep, lista della spesa, consumi", phase: 6, done: false },

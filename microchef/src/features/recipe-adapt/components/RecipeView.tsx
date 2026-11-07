@@ -3,9 +3,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { MODE_LABELS } from "@/features/oven-profile/schema";
-import { formatDuration, roundCookingSeconds } from "@/features/power-converter/logic";
-import { portionWarnings, scaleCookingSeconds, scaleIngredient } from "@/features/portions/logic";
-import type { AdaptedStep, StoredAdaptation } from "../schema";
+import { formatDuration } from "@/features/power-converter/logic";
+import { portionWarnings, scaleIngredient } from "@/features/portions/logic";
+import type { StoredAdaptation } from "../schema";
+import { scaleStep } from "../scale";
 import { FeasibilityBadge } from "./FeasibilityBadge";
 
 const COVERAGE = {
@@ -13,11 +14,6 @@ const COVERAGE = {
   regola_generale: { label: "regola generale", cls: "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300" },
   non_coperto: { label: "non coperto dal manuale", cls: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300" },
 } as const;
-
-/** Al microonde il tempo dipende dalla quantità; in convezione e grill molto meno. */
-function scalesWithQuantity(s: AdaptedStep) {
-  return s.mode === "microwave" || s.mode === "defrost" || s.mode === "steam" || (s.mode?.startsWith("combi") ?? false);
-}
 
 export function RecipeView(props: {
   id: string;
@@ -107,15 +103,16 @@ export function RecipeView(props: {
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Procedimento</h2>
         {data.steps.map((s, i) => {
-          const scale = ratio !== 1 && s.durationSeconds && scalesWithQuantity(s);
-          const dur = s.durationSeconds ? (scale ? scaleCookingSeconds(s.durationSeconds, ratio, roundCookingSeconds) : s.durationSeconds) : null;
-          const durMax = s.durationMaxSeconds ? (scale ? scaleCookingSeconds(s.durationMaxSeconds, ratio, roundCookingSeconds) : s.durationMaxSeconds) : null;
+          const sc = scaleStep(s, ratio);
+          const scale = sc.scaled;
+          const dur = sc.durationSeconds;
+          const durMax = sc.durationMaxSeconds;
           return (
             <article key={i} className="card space-y-2">
               <div className="flex items-start gap-3">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-600 font-bold text-white">{i + 1}</span>
                 <div className="min-w-0 flex-1 space-y-2">
-                  <p className="font-medium">{s.instruction}</p>
+                  <p className="font-medium">{sc.instruction}</p>
                   {s.mode !== null && (
                     <div className="flex flex-wrap gap-1 text-sm">
                       <Chip>{s.modeLabel ?? MODE_LABELS[s.mode]}</Chip>
@@ -129,13 +126,13 @@ export function RecipeView(props: {
                   {s.container && <p className="text-sm text-stone-600 dark:text-stone-400">Contenitore: {s.container}</p>}
                   {s.pauses.length > 0 && (
                     <ul className="list-disc pl-5 text-sm text-stone-700 dark:text-stone-300">
-                      {s.pauses.map((p) => (
-                        <li key={p}>{scale && dur ? p.replace(/dopo circa [^)]+/, `dopo circa ${formatDuration(roundCookingSeconds(dur / 2))}`) : p}</li>
+                      {sc.pauses.map((p) => (
+                        <li key={p}>{p}</li>
                       ))}
                     </ul>
                   )}
                   {s.note && <p className="text-sm text-stone-600 dark:text-stone-400">💡 {s.note}</p>}
-                  {s.original && s.original !== s.instruction && <p className="text-xs text-stone-400">Originale: {s.original}</p>}
+                  {s.original && s.original !== sc.instruction && <p className="text-xs text-stone-400">Originale: {s.original}</p>}
                   {(s.mode !== null || s.coverage === "non_coperto") && (
                     <div className="flex flex-wrap items-center gap-1">
                       <span className={`rounded-full px-2 py-0.5 text-xs ${COVERAGE[s.coverage].cls}`}>{COVERAGE[s.coverage].label}</span>
@@ -165,6 +162,9 @@ export function RecipeView(props: {
       )}
 
       <div className="flex flex-wrap gap-2">
+        <Link href={`/ricette/${props.id}/cucina?porzioni=${servings}`} className="btn-primary">
+          👩‍🍳 Inizia a cucinare
+        </Link>
         <Link href="/ricette/nuova" className="btn-secondary">
           Adatta un&apos;altra ricetta
         </Link>

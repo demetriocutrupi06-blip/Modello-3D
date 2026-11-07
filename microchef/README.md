@@ -37,7 +37,7 @@ ad esempio pubblicandola su Vercel. In locale, sul computer, il browser la consi
 | 2 | Adattamento della ricetta (gratis con regole, oppure con Claude) | ✅ Fase 2 |
 | 4 | Convertitore di potenza | ✅ Fase 2 |
 | 5 | Scalare le porzioni | ✅ Fase 2 |
-| 8 | Modalità cucina (timer, voce, schermo acceso) | Fase 3 |
+| 8 | Modalità cucina (timer, voce, schermo acceso) | ✅ Fase 3 |
 | 3, 6, 7 | Suggerimenti, avanzi, controllo contenitori | Fase 4 |
 | 9, 11 | Diario di cottura, assistente del manuale | Fase 5 |
 | 10, 12 | Meal prep e lista della spesa, stima dei consumi | Fase 6 |
@@ -134,6 +134,33 @@ MANUAL_PDF=/percorso/del/manuale.pdf npm test
 3. **Porzioni**: nella ricetta premi + e −: cambiano le quantità e i tempi dei passaggi al microonde.
 4. **Link e foto**: prova con l'indirizzo di una ricetta online, oppure con la foto di una ricetta o di un'etichetta.
 
+### Fase 3: modalità cucina
+
+Dalla pagina di una ricetta: **👩‍🍳 Inizia a cucinare** (porta con sé il numero di porzioni scelto).
+
+- **Una schermata per passaggio**, testi grandi e pulsanti ampi (Indietro / Avanti); la prima schermata
+  elenca gli ingredienti, l'ultima chiude la ricetta.
+- **Timer per ogni passaggio** con tempo (già adattato alle porzioni): Avvia/Pausa, +30 s, Azzera.
+  Si basa su orari assoluti (`src/features/cooking-mode/timer.ts`), quindi resta preciso anche con lo schermo
+  in background. Se cambi passaggio mentre un timer corre, compare una barra con il conto alla rovescia.
+- **A fine tempo**: avviso sonoro (Web Audio), vibrazione sul telefono e notifica (se la autorizzi).
+- **Schermo sempre acceso** con la Wake Lock API (indicatore ☀️ in alto a destra).
+- **Lettura ad alta voce** delle istruzioni in italiano (🔊 Leggi, oppure "Leggi sempre" a ogni passaggio).
+- **Comandi vocali** in italiano (Web Speech API, `speech.ts`): "prossimo passaggio", "indietro", "ripeti",
+  "quanto manca?", "avvia timer", "pausa timer", "ingredienti". Funzionano su **Chrome ed Edge**; su Opera e
+  Firefox il riconoscimento vocale non è disponibile (la lettura ad alta voce sì). Chrome invia l'audio ai server
+  di Google per il riconoscimento, quindi serve la connessione.
+
+Limiti dei browser: microfono, notifiche e schermo acceso richiedono un indirizzo sicuro (`https://` oppure
+`http://localhost`). Aprendo l'app dal telefono con l'indirizzo IP del computer queste funzioni non sono disponibili.
+
+### Come provare la Fase 3
+
+1. Apri una ricetta adattata, scegli le porzioni e premi **👩‍🍳 Inizia a cucinare**.
+2. Premi **Inizia ▶**, poi **▶ Avvia** sul timer; prova **+30 s**, **Pausa** e cambia passaggio: in alto resta il conto alla rovescia.
+3. Lascia finire un timer breve (puoi ridurlo con Azzera e una ricetta da 1 minuto) per sentire l'avviso.
+4. In Chrome o Edge premi **🎙️ Comandi vocali**, consenti il microfono e di' "avvia timer", "quanto manca?", "prossimo passaggio".
+
 ## Struttura
 
 ```
@@ -152,7 +179,8 @@ microchef/
         ├── oven-profile/         schema del profilo, estrazione (Claude o regole), caricamento, componenti
         ├── power-converter/      convertitore di potenza (funzioni pure + pagina)
         ├── portions/             porzioni: ingredienti e tempi (funzioni pure)
-        └── recipe-adapt/         lettura ricette, riconoscimento cotture, adattamento gratis e con Claude
+        ├── recipe-adapt/         lettura ricette, riconoscimento cotture, adattamento gratis e con Claude
+        └── cooking-mode/         modalità cucina: timer, comandi vocali, sintesi vocale, schermo acceso
 ```
 
 Ogni funzionalità avrà la sua cartella in `src/features/` con schema, logica, parte server, componenti e test.
