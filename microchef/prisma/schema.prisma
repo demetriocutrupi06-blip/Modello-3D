@@ -1,0 +1,144 @@
+// Schema completo di MicroChef. La Fase 1 usa Oven, ManualDocument, ManualSection e Settings;
+// le altre tabelle sono già definite per le fasi successive, così da non dover rifare il database.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Oven {
+  id        String          @id @default(cuid())
+  nickname  String
+  brand     String
+  model     String
+  /// OvenProfile (src/features/oven-profile/schema.ts), validato con zod e corretto dall'utente
+  profile   Json
+  confirmed Boolean         @default(false)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  manual    ManualDocument?
+  recipes   AdaptedRecipe[]
+  journal   JournalEntry[]
+  mealPlans MealPlan[]
+}
+
+model ManualDocument {
+  id        String          @id @default(cuid())
+  ovenId    String          @unique
+  oven      Oven            @relation(fields: [ovenId], references: [id], onDelete: Cascade)
+  fileName  String
+  /// "pdf_text" | "pdf_ocr" | "images_ocr"
+  source    String
+  pageCount Int
+  createdAt DateTime        @default(now())
+  sections  ManualSection[]
+}
+
+model ManualSection {
+  /// chiave interna; `slug` è l'id citabile (es. "p14-livelli-di-potenza-e-modifiche-dei-tempi")
+  id       String         @id @default(cuid())
+  slug     String
+  manualId String
+  manual   ManualDocument @relation(fields: [manualId], references: [id], onDelete: Cascade)
+  title    String
+  pageFrom Int
+  pageTo   Int
+  text     String
+  order    Int
+
+  @@unique([manualId, slug])
+}
+
+model Recipe {
+  id           String          @id @default(cuid())
+  title        String
+  /// "text" | "url" | "photo"
+  sourceType   String
+  sourceUrl    String?
+  rawText      String
+  servings     Int?
+  dishCategory String?
+  createdAt    DateTime        @default(now())
+  adaptations  AdaptedRecipe[]
+}
+
+model AdaptedRecipe {
+  id          String          @id @default(cuid())
+  recipeId    String
+  recipe      Recipe          @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ovenId      String
+  oven        Oven            @relation(fields: [ovenId], references: [id], onDelete: Cascade)
+  /// "si" | "parziale" | "sconsigliato"
+  feasibility String
+  servings    Int
+  data        Json
+  createdAt   DateTime        @default(now())
+  journal     JournalEntry[]
+  planEntries MealPlanEntry[]
+}
+
+model JournalEntry {
+  id            String         @id @default(cuid())
+  ovenId        String
+  oven          Oven           @relation(fields: [ovenId], references: [id], onDelete: Cascade)
+  adaptedId     String?
+  adapted       AdaptedRecipe? @relation(fields: [adaptedId], references: [id], onDelete: SetNull)
+  dishCategory  String
+  /// "poco_cotto" | "giusto" | "troppo_cotto"
+  outcome       String
+  appliedFactor Float          @default(1)
+  notes         String?
+  createdAt     DateTime       @default(now())
+
+  @@index([ovenId, dishCategory])
+}
+
+model MealPlan {
+  id        String          @id @default(cuid())
+  ovenId    String
+  oven      Oven            @relation(fields: [ovenId], references: [id], onDelete: Cascade)
+  weekStart DateTime
+  people    Int
+  entries   MealPlanEntry[]
+  shopping  ShoppingList?
+}
+
+model MealPlanEntry {
+  id        String        @id @default(cuid())
+  planId    String
+  plan      MealPlan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  date      DateTime
+  /// "pranzo" | "cena"
+  meal      String
+  adaptedId String
+  adapted   AdaptedRecipe @relation(fields: [adaptedId], references: [id])
+  servings  Int
+}
+
+model ShoppingList {
+  id     String         @id @default(cuid())
+  planId String         @unique
+  plan   MealPlan       @relation(fields: [planId], references: [id], onDelete: Cascade)
+  items  ShoppingItem[]
+}
+
+model ShoppingItem {
+  id       String       @id @default(cuid())
+  listId   String
+  list     ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  name     String
+  quantity Float?
+  unit     String?
+  aisle    String
+  checked  Boolean      @default(false)
+}
+
+model Settings {
+  id           Int     @id @default(1)
+  tariffEurKwh Float   @default(0.30)
+  activeOvenId String?
+}

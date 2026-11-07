@@ -52,3 +52,7 @@ Altri controlli:
 - Il lettore e il chip sono in scala reciproca. La scena nano usa una scala separata (Å).
 - Le dimensioni del lettore, la capacità della batteria e le diciture sui componenti sono indicative e servono a illustrare il progetto.
 - Nella vista Chip il reticolo del grafene è stilizzato perché quello reale (0,246 nm) non sarebbe visibile; nella vista Nano è in scala atomica.
+
+## Altre app in questa repository
+
+- [`microchef/`](microchef/): MicroChef, adatta le ricette al proprio forno a microonde partendo dal manuale (Next.js).
