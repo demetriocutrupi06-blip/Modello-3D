@@ -1,6 +1,8 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ocrImages, readPdf } from "@/lib/ingest/browser";
+import { classifyUpload, IngestError } from "../ingest";
 
 export function UploadManualForm({ hasApiKey }: { hasApiKey: boolean }) {
   const router = useRouter();
@@ -9,6 +11,7 @@ export function UploadManualForm({ hasApiKey }: { hasApiKey: boolean }) {
   const [modelHint, setModelHint] = useState("");
   const [mode, setMode] = useState<"ai" | "free">(hasApiKey ? "ai" : "free");
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<{ message: string; fraction: number } | null>(null);
   const [error, setError] = useState<{ message: string; details?: string[] } | null>(null);
 
   async function submit(e: React.FormEvent) {
@@ -16,23 +19,37 @@ export function UploadManualForm({ hasApiKey }: { hasApiKey: boolean }) {
     if (files.length === 0) return;
     setBusy(true);
     setError(null);
-    const form = new FormData();
-    files.forEach((f) => form.append("files", f));
-    form.append("nickname", nickname);
-    form.append("modelHint", modelHint);
-    form.append("mode", mode);
+    const onProgress = (message: string, fraction: number) => setProgress({ message, fraction });
     try {
-      const res = await fetch("/api/ovens", { method: "POST", body: form });
+      // 1. lettura del file nel browser: al server arriva solo il testo
+      const kind = classifyUpload(files);
+      let pages: string[];
+      let source: "pdf_text" | "pdf_ocr" | "images_ocr";
+      if (kind === "pdf") {
+        ({ pages, source } = await readPdf(files[0], onProgress));
+      } else {
+        const sorted = [...files].sort((a, b) => a.name.localeCompare(b.name, "it", { numeric: true }));
+        pages = await ocrImages(sorted, onProgress);
+        source = "images_ocr";
+      }
+      // 2. sezioni e profilo sul server
+      onProgress(mode === "ai" ? "Claude sta leggendo il manuale (1-3 minuti)…" : "Ricavo il profilo del forno…", 1);
+      const res = await fetch("/api/ovens", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ pages, source, fileName: files.length === 1 ? files[0].name : `${files.length} immagini`, nickname, modelHint, mode }),
+      });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError({ message: body.error ?? `Errore ${res.status}`, details: body.details });
         return;
       }
       router.push(`/forni/${body.id}`);
-    } catch {
-      setError({ message: "Connessione al server non riuscita." });
+    } catch (err) {
+      setError({ message: err instanceof IngestError ? err.message : "Non sono riuscito a leggere il file. Riprova, oppure prova con le foto delle pagine." });
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   }
 
@@ -99,14 +116,13 @@ export function UploadManualForm({ hasApiKey }: { hasApiKey: boolean }) {
       <button type="submit" className="btn-primary w-full sm:w-auto" disabled={busy || files.length === 0}>
         {busy ? "Lettura del manuale in corso…" : "Leggi il manuale"}
       </button>
-      {busy && (
-        <p className="text-sm text-stone-500">
-          {mode === "ai"
-            ? "Può richiedere da uno a tre minuti per un manuale di 40 pagine. Non chiudere la pagina."
-            : files.some((f) => f.type.startsWith("image/"))
-              ? "Lettura delle foto con l'OCR: circa 10 secondi per pagina."
-              : "Pochi secondi…"}
-        </p>
+      {busy && progress && (
+        <div className="space-y-1" aria-live="polite">
+          <div className="h-2 overflow-hidden rounded-full bg-stone-200 dark:bg-stone-800">
+            <div className="h-full bg-brand-600 transition-all" style={{ width: `${Math.round(progress.fraction * 100)}%` }} />
+          </div>
+          <p className="text-sm text-stone-500">{progress.message} Non chiudere la pagina.</p>
+        </div>
       )}
       {error && (
         <div role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">

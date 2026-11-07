@@ -2,7 +2,6 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { anthropicCall } from "@/lib/llm/client";
-import { ocrImages } from "@/lib/ingest/ocr";
 import { getOven, hasApiKey } from "@/features/oven-profile/server";
 import { IngestError } from "@/features/oven-profile/ingest";
 import { adaptRecipeFree } from "./free-adapter";
@@ -38,14 +37,6 @@ export async function extractFromUrl(url: string): Promise<{ text: string; struc
     throw new RecipeError("Non ho trovato una ricetta in questa pagina. Copia e incolla il testo della ricetta.");
   }
   return { text: recipeToText(recipe), structured };
-}
-
-export async function extractFromImages(images: Buffer[]): Promise<string> {
-  if (images.length === 0) throw new RecipeError("Nessuna foto caricata.");
-  const pages = await ocrImages(images);
-  const text = pages.join("\n\n").trim();
-  if (text.length < 20) throw new RecipeError("Dalla foto si legge poco testo: prova con una foto più nitida e dritta.");
-  return text;
 }
 
 export async function getActiveOvenId(): Promise<string | null> {

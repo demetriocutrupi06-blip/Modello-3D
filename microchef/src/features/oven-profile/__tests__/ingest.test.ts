@@ -1,20 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
-import { classifyUpload, IngestError, parseManual, type IngestDeps, type UploadedFile } from "../ingest";
+import { describe, expect, it } from "vitest";
+import { buildManual, classifyUpload, IngestError, type UploadedFile } from "../ingest";
 
 const text = (n: number) =>
   `LIVELLI DI POTENZA\n${"Il forno offre sei livelli di potenza tra 100 W e 900 W, da scegliere in base all'alimento. ".repeat(n)}`;
 
-const pdf: UploadedFile = { name: "manuale.pdf", type: "application/pdf", data: Buffer.from("%PDF") };
-const img = (name: string): UploadedFile => ({ name, type: "image/jpeg", data: Buffer.from(name) });
-
-function deps(overrides: Partial<IngestDeps> = {}): IngestDeps {
-  return {
-    extractPdfPages: vi.fn(async () => ({ pages: [text(10)], pageCount: 1, looksScanned: false })),
-    transcribeScannedPdf: vi.fn(async () => [text(10)]),
-    ocrImages: vi.fn(async (images: Buffer[]) => images.map(() => text(5))),
-    ...overrides,
-  };
-}
+const pdf: UploadedFile = { name: "manuale.pdf", type: "application/pdf", size: 7_500_000 };
+const img = (name: string): UploadedFile => ({ name, type: "image/jpeg", size: 2_000_000 });
 
 describe("classifyUpload", () => {
   it("riconosce un PDF o un gruppo di immagini", () => {
@@ -22,40 +13,22 @@ describe("classifyUpload", () => {
     expect(classifyUpload([img("a.jpg"), img("b.jpg")])).toBe("images");
   });
 
-  it("rifiuta combinazioni e formati non supportati", () => {
+  it("rifiuta combinazioni, formati non supportati e file enormi", () => {
     expect(() => classifyUpload([])).toThrow(IngestError);
     expect(() => classifyUpload([pdf, img("a.jpg")])).toThrow(/un solo PDF/);
-    expect(() => classifyUpload([{ name: "x.docx", type: "application/msword", data: Buffer.from("") }])).toThrow(/non supportato/);
+    expect(() => classifyUpload([{ name: "x.docx", type: "application/msword", size: 10 }])).toThrow(/non supportato/);
+    expect(() => classifyUpload([{ ...pdf, size: 80_000_000 }])).toThrow(/60 MB/);
   });
 });
 
-describe("parseManual", () => {
-  it("usa il testo del PDF quando c'è", async () => {
-    const d = deps();
-    const m = await parseManual([pdf], d);
-    expect(m.source).toBe("pdf_text");
+describe("buildManual", () => {
+  it("divide il testo delle pagine in sezioni citabili", () => {
+    const m = buildManual([text(10)], "pdf_text", "manuale.pdf");
+    expect(m).toMatchObject({ source: "pdf_text", pageCount: 1, fileName: "manuale.pdf" });
     expect(m.sections[0].id).toBe("p1-livelli-di-potenza");
-    expect(d.transcribeScannedPdf).not.toHaveBeenCalled();
   });
 
-  it("trascrive con il modello i PDF scansionati", async () => {
-    const d = deps({ extractPdfPages: vi.fn(async () => ({ pages: [""], pageCount: 1, looksScanned: true })) });
-    const m = await parseManual([pdf], d);
-    expect(m.source).toBe("pdf_ocr");
-    expect(d.transcribeScannedPdf).toHaveBeenCalledOnce();
-  });
-
-  it("legge le foto in ordine numerico di nome file", async () => {
-    const d = deps();
-    const m = await parseManual([img("pag-10.jpg"), img("pag-2.jpg"), img("pag-1.jpg")], d);
-    expect(m.source).toBe("images_ocr");
-    const order = vi.mocked(d.ocrImages).mock.calls[0][0].map((b) => b.toString());
-    expect(order).toEqual(["pag-1.jpg", "pag-2.jpg", "pag-10.jpg"]);
-    expect(m.fileName).toBe("3 immagini");
-  });
-
-  it("si ferma se il testo letto è troppo poco", async () => {
-    const d = deps({ extractPdfPages: vi.fn(async () => ({ pages: ["POCO\nniente"], pageCount: 1, looksScanned: false })) });
-    await expect(parseManual([pdf], d)).rejects.toThrow(/troppo poco testo/);
+  it("si ferma se il testo letto è troppo poco", () => {
+    expect(() => buildManual(["POCO\nniente"], "images_ocr", "foto")).toThrow(/troppo poco testo/);
   });
 });

@@ -19,6 +19,8 @@ Variabili in `.env`:
 
 | Variabile | Uso |
 |---|---|
+| `APP_PASSWORD` | solo online: password unica per entrare nell'app |
+| `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` | solo online: database Turso al posto del file SQLite |
 | `ANTHROPIC_API_KEY` | facoltativa. Chiave API, letta solo dal server (mai inviata al browser): abilita la lettura del manuale con Claude, a pagamento |
 | `ANTHROPIC_MODEL` | modello da usare, predefinito `claude-sonnet-5-5` (per più qualità: `claude-opus-5-5`) |
 | `ANTHROPIC_EFFORT` | `low`, `medium` o `high`: quanto il modello ragiona prima di rispondere |
@@ -28,6 +30,31 @@ Comandi utili: `npm test` (test unitari), `npm run lint` (controllo dei tipi), `
 
 Per installarla come app sul telefono serve la build di produzione (`npm run build && npm start`) servita in HTTPS,
 ad esempio pubblicandola su Vercel. In locale, sul computer, il browser la considera già sicura.
+
+## Metterla online e usarla dal telefono
+
+L'app si può pubblicare gratis su **Vercel** (hosting) con un database **Turso** (compatibile con SQLite),
+protetta da un'unica password condivisa. Sul telefono si installa come app dalla schermata Home.
+
+1. **Turso** (https://turso.tech): accedi con GitHub, crea un database (regione europea), poi copia
+   l'indirizzo `libsql://…` e crea un token.
+2. **Vercel** (https://vercel.com): accedi con GitHub, *Add New → Project*, importa questa repository e imposta
+   - *Root Directory*: `microchef`
+   - variabili d'ambiente: `APP_PASSWORD` (la password della famiglia), `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`
+     (e facoltativamente `ANTHROPIC_API_KEY`).
+   Vercel pubblica il branch predefinito della repository: deve essere quello che contiene `microchef/`.
+3. Al primo deploy lo script `scripts/db-init.mjs` crea le tabelle su Turso.
+4. Sul telefono apri l'indirizzo `https://….vercel.app` in Chrome, inserisci la password e scegli
+   *⋮ → Aggiungi a schermata Home* (su iPhone: Safari → Condividi → *Aggiungi alla schermata Home*).
+
+Come funziona online:
+- **Manuale e foto vengono letti nel browser** (pdf.js e tesseract.js): al server arriva solo il testo, quindi
+  vanno bene anche PDF grandi, oltre il limite di ~4 MB delle richieste su Vercel.
+- **Password**: `src/middleware.ts` protegge tutte le pagine e le API se `APP_PASSWORD` è impostata; il cookie di
+  sessione (un anno) contiene un HMAC della password, quindi cambiandola si escono tutti i dispositivi.
+- Con l'indirizzo `https://` funzionano anche sul telefono comandi vocali (Chrome), notifiche e schermo acceso.
+- Se in futuro lo schema del database cambia, le nuove tabelle andranno aggiunte anche su Turso
+  (`prisma/init.sql` contiene lo schema completo per un database nuovo).
 
 ## Funzionalità
 
@@ -45,10 +72,10 @@ ad esempio pubblicandola su Vercel. In locale, sul computer, il browser la consi
 ### Fase 1: manuale e profilo forno
 
 1. **Caricamento** (`/forni/nuovo`): un PDF oppure le foto delle pagine (lette in ordine di nome file).
-2. **Estrazione del testo**
-   - PDF con testo: `pdf-parse`, con una ricomposizione delle colonne (`src/lib/ingest/layout.ts`). Molti manuali sono
+2. **Estrazione del testo, nel browser** (`src/lib/ingest/browser.ts`)
+   - PDF con testo: pdf.js, con una ricomposizione delle colonne (`src/lib/ingest/layout.ts`). Molti manuali sono
      su due colonne e la lettura riga per riga le mescolerebbe; le etichette laterali ruotate vengono scartate.
-   - PDF scansionato (quasi senza testo): il PDF viene passato all'API di Claude, che lo trascrive pagina per pagina.
+   - PDF scansionato (quasi senza testo): le pagine vengono disegnate e lette con l'OCR.
    - Foto: OCR in italiano con `tesseract.js`.
 3. **Sezioni**: il testo viene diviso in sezioni in base ai titoli in maiuscolo (`src/lib/ingest/sections.ts`).
    Ogni sezione ha un id citabile con la pagina, es. `p14-livelli-di-potenza-e-modifiche-dei-tempi`.
@@ -56,7 +83,7 @@ ad esempio pubblicandola su Vercel. In locale, sul computer, il browser la consi
    pre-compilato con regole sul testo (`src/features/oven-profile/heuristics.ts`): tabella dei livelli di potenza,
    capacità in litri, potenza resa e assorbita, codici di errore, modalità trovate nei titoli, marca e modello.
    Il resto (programmi automatici, accessori, contenitori, avvertenze) lo completi tu, con il testo del manuale
-   consultabile nella stessa pagina. I PDF scansionati vanno caricati come foto delle pagine, lette con l'OCR.
+   consultabile nella stessa pagina.
 5. **Profilo forno, con Claude** (a pagamento, richiede la chiave): il modello riceve tutte le sezioni e restituisce un JSON (`src/features/oven-profile/schema.ts`)
    con marca, modello, capacità, livelli di potenza (W resi), potenza assorbita, modalità, programmi automatici,
    accessori, regole sui contenitori, avvertenze, risoluzione dei problemi e codici di errore.

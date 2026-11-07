@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ocrImages } from "@/lib/ingest/browser";
 
 type Source = "text" | "url" | "photo";
 
@@ -20,17 +21,27 @@ export function RecipeInputForm({ hasApiKey }: { hasApiKey: boolean }) {
     setBusy("extract");
     setError(null);
     setInfo(null);
-    const form = new FormData();
-    if (source === "url") form.append("url", url);
-    else files.forEach((f) => form.append("files", f));
     try {
-      const res = await fetch("/api/recipes/extract", { method: "POST", body: form });
+      if (source === "photo") {
+        // OCR direttamente sul telefono
+        const pages = await ocrImages(files, (m) => setInfo(m));
+        const read = pages.join("\n\n").trim();
+        if (read.length < 20) return setError("Dalla foto si legge poco testo: prova con una foto più nitida e dritta.");
+        setText(read);
+        setInfo("Testo letto dalla foto con l'OCR: correggi eventuali errori.");
+        return;
+      }
+      const res = await fetch("/api/recipes/extract", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) return setError(body.error ?? `Errore ${res.status}`);
       setText(body.text);
       setInfo(body.info);
     } catch {
-      setError("Connessione al server non riuscita.");
+      setError(source === "photo" ? "Non sono riuscito a leggere la foto." : "Connessione al server non riuscita.");
     } finally {
       setBusy(null);
     }
@@ -106,7 +117,6 @@ export function RecipeInputForm({ hasApiKey }: { hasApiKey: boolean }) {
             </button>
           </div>
         )}
-        {busy === "extract" && source === "photo" && <p className="text-sm text-stone-500">Lettura della foto con l&apos;OCR, circa 10-20 secondi…</p>}
         {info && <p className="text-sm text-stone-500">{info}</p>}
 
         <label className="block">

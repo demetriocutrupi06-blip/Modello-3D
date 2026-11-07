@@ -5,7 +5,7 @@
   "description": "Adatta qualsiasi ricetta al tuo forno a microonde, partendo dal suo manuale d'uso.",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/db-init.mjs && next build",
     "start": "next start",
     "lint": "tsc --noEmit",
     "test": "vitest run",
@@ -16,9 +16,11 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",
+    "@libsql/client": "^0.8.1",
+    "@prisma/adapter-libsql": "^6.19.3",
     "@prisma/client": "^6.19.3",
     "next": "^15.5.29",
-    "pdf-parse": "^1.1.4",
+    "pdfjs-dist": "^4.10.38",
     "react": "^19.1.10",
     "react-dom": "^19.1.10",
     "server-only": "^0.0.1",
@@ -28,12 +30,14 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.5",
     "@types/node": "^22.20.5",
-    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "prisma": "^6.19.3",
     "tailwindcss": "^4.3.5",
     "typescript": "^5.9.3",
     "vitest": "^3.2.7"
+  },
+  "engines": {
+    "node": ">=20.9"
   }
 }

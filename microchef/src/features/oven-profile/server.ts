@@ -2,29 +2,10 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { anthropicCall } from "@/lib/llm/client";
-import { extractPdfPages } from "@/lib/ingest/pdf";
-import { ocrImages } from "@/lib/ingest/ocr";
-import { transcribeScannedPdf } from "@/lib/ingest/scanned-pdf";
 import { extractOvenProfile } from "./extract";
 import { prefillProfile } from "./heuristics";
-import { IngestError, parseManual, type IngestDeps, type UploadedFile } from "./ingest";
+import { buildManual, type ManualSource } from "./ingest";
 import { OvenProfile, normalizeProfile } from "./schema";
-
-const deps: IngestDeps = {
-  extractPdfPages,
-  ocrImages,
-  transcribeScannedPdf: (data, pageCount) => transcribeScannedPdf(anthropicCall, data, pageCount),
-};
-
-/** Modalità gratuita: nessuna chiamata a Claude. */
-const freeDeps: IngestDeps = {
-  ...deps,
-  transcribeScannedPdf: async () => {
-    throw new IngestError(
-      "Questo PDF è una scansione senza testo: in modalità gratuita caricalo come foto delle pagine (JPG o PNG), che verranno lette con l'OCR.",
-    );
-  },
-};
 
 export type AnalysisMode = "ai" | "free";
 
@@ -33,12 +14,20 @@ export function hasApiKey(): boolean {
 }
 
 /**
- * Carica il manuale, ricava il profilo e salva il forno come "da verificare".
+ * Dal testo del manuale (letto nel browser) ricava il profilo e salva il forno come "da verificare".
  * - "ai": profilo estratto da Claude (a pagamento, richiede ANTHROPIC_API_KEY);
  * - "free": profilo pre-compilato con regole sul testo, da completare a mano.
  */
-export async function createOvenFromManual(files: UploadedFile[], nickname: string, modelHint: string | undefined, mode: AnalysisMode) {
-  const manual = await parseManual(files, mode === "ai" ? deps : freeDeps);
+export async function createOvenFromManual(input: {
+  pages: string[];
+  source: ManualSource;
+  fileName: string;
+  nickname: string;
+  modelHint?: string;
+  mode: AnalysisMode;
+}) {
+  const { nickname, modelHint, mode } = input;
+  const manual = buildManual(input.pages, input.source, input.fileName);
   const profile =
     mode === "ai"
       ? await extractOvenProfile({ call: anthropicCall, sections: manual.sections, modelHint })
