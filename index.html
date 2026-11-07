@@ -82,6 +82,11 @@ body {
 }
 .brand h1 span { color: var(--accent); }
 .brand p { margin: 0; color: var(--muted); font-size: 12px; }
+.brand .badge {
+  align-self: flex-start; margin-top: 8px; padding: 4px 9px; border-radius: 4px;
+  background: var(--accent-fill); color: var(--on-accent);
+  font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase;
+}
 .eyebrow {
   font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
   margin: 0 0 6px;
@@ -133,6 +138,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent-fill); }
   <div class="brand">
     <h1>Gra<span>He</span>aL</h1>
     <p>Diagnostica Point-of-Care su GFET · cartuccia monouso + lettore portatile</p>
+    <p class="badge" role="note">Concetto – non è un prototipo</p>
   </div>
 
   <div>
@@ -160,13 +166,13 @@ input[type="range"] { width: 100%; accent-color: var(--accent-fill); }
       <label><input id="opt-rotate" type="checkbox"> Rotazione</label>
     </div>
     <div class="actions">
-      <button id="btn-test" class="btn primary">Inocula goccia e misura</button>
+      <button id="btn-test" class="btn primary">Simula una misura</button>
       <button id="btn-glb" class="btn" hidden>Esporta .glb</button>
     </div>
   </div>
 
   <section class="spec" id="spec" aria-live="polite"></section>
-  <p class="foot">Modello illustrativo: le dimensioni del lettore sono indicative e le scale nano/macro sono separate.</p>
+  <p class="foot">Modello illustrativo di un concetto. Dimensioni indicative; le scale nano e macro sono separate. Le prestazioni non sono state misurate.</p>
 </aside>
 <div id="hint">trascina per ruotare · rotella/pinch per zoom · tasto destro per spostare</div>
 
@@ -277,7 +283,7 @@ const MAT = {
   blackGloss: new THREE.MeshPhysicalMaterial({ color: 0x0c0e10, roughness: 0.2, clearcoat: 1 }),
   void: new THREE.MeshBasicMaterial({ color: 0x050607, side: THREE.BackSide }),
   pla: new THREE.MeshPhysicalMaterial({ color: 0xf1e4c8, roughness: 0.32, transmission: 0.55, thickness: 0.4, ior: 1.46, clearcoat: 0.4 }),
-  lid: new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.08, transmission: 0.92, thickness: 0.3, ior: 1.46, transparent: true, opacity: 0.9 }),
+  lid: new THREE.MeshPhysicalMaterial({ color: 0xf4f8fa, roughness: 0.06, clearcoat: 1, transparent: true, opacity: 0.32, depthWrite: false }),
   passiv: new THREE.MeshPhysicalMaterial({ color: 0x6fa8d6, roughness: 0.25, transmission: 0.45, transparent: true, opacity: 0.72, thickness: 0.1 }),
   blood: new THREE.MeshPhysicalMaterial({ color: 0x8e0f12, roughness: 0.06, clearcoat: 1, clearcoatRoughness: 0.04, transmission: 0.18, thickness: 1.5, ior: 1.36, sheen: 0.3, sheenColor: 0xff6a5a }),
 };
@@ -427,15 +433,25 @@ for (const { id, z0 } of CHAN) {
 }
 
 // microfluidic sample path (fills during the test)
-const fluidMat = () => new THREE.MeshPhysicalMaterial({ color: 0xb0161a, roughness: 0.1, transparent: true, opacity: 0, transmission: 0.2, depthWrite: false });
+const fluidMat = (color) => new THREE.MeshPhysicalMaterial({ color, roughness: 0.1, transparent: true, opacity: 0, transmission: 0.2, depthWrite: false });
+const BLOOD = 0xb0161a, PLASMA = 0xf0c63c;
 const fluidSegs = [];
-function fluid(geo, name) { const m = mesh(bendable(geo), fluidMat(), layers[5], name); fluidSegs.push(m); return m; }
+// t0: start of the fill (s after the drop lands), op: final opacity
+function fluid(geo, name, color, t0, op) { const m = mesh(bendable(geo), fluidMat(color), layers[5], name); m.userData = { t0, op }; fluidSegs.push(m); return m; }
+// plasma separation membrane between the inlet and the channels (retains blood cells)
+const membraneTex = canvasTex(256, 256, (c, w, h) => {
+  c.fillStyle = '#e9ebec'; c.fillRect(0, 0, w, h); const r = rng(5);
+  for (let i = 0; i < 1400; i++) { c.fillStyle = `rgba(120,130,138,${0.15 + r() * 0.35})`; c.beginPath(); c.arc(r() * w, r() * h, 0.8 + r() * 2.2, 0, 7); c.fill(); }
+});
+const membraneMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: membraneTex, roughness: 0.95 });
+const MEMBRANE_CLEAN = new THREE.Color(0xffffff), MEMBRANE_LOADED = new THREE.Color(0xd8a09a);
 {
-  const disc = new THREE.CylinderGeometry(2.45, 2.45, 0.14, 40, 1); disc.translate(35, 0.13, 0); fluid(disc, 'fluido_inlet');
-  fluid(boxXYZ(30.1, 33, 0.06, 0.2, -0.35, 0.35), 'fluido_canale');
-  fluid(boxXYZ(30.1, 30.8, 0.06, 0.2, -3.6, 3.6), 'fluido_biforcazione');
+  const disc = new THREE.CylinderGeometry(2.45, 2.45, 0.14, 40, 1); disc.translate(35, 0.13, 0); fluid(disc, 'fluido_sangue_inlet', BLOOD, 0, 0.62);
+  const mg = new THREE.CylinderGeometry(1.15, 1.15, 0.22, 40, 1); mg.translate(31.25, 0.17, 0);
+  mesh(bendable(mg), membraneMat, layers[5], 'membrana_separazione_plasma');
+  fluid(boxXYZ(30.1, 30.8, 0.06, 0.2, -3.6, 3.6), 'fluido_plasma_biforcazione', PLASMA, 1.0, 0.75);
   const ca = boxXYZ(20.6, 30.1, 0.06, 0.2, 0.9, 6.1), cb = boxXYZ(20.6, 30.1, 0.06, 0.2, -6.1, -0.9);
-  fluid(mergeGeometries([ca, cb]), 'fluido_camere');
+  fluid(mergeGeometries([ca, cb]), 'fluido_plasma_camere', PLASMA, 1.45, 0.7);
 }
 // transparent lid with inlet opening (four segmented slabs around a square window + funnel ring)
 {
@@ -443,9 +459,9 @@ function fluid(geo, name) { const m = mesh(bendable(geo), fluidMat(), layers[5],
   const parts = [boxXYZ(18.5, 32.3, y0, y1, -6.8, 6.8), boxXYZ(37.7, 39.6, y0, y1, -6.8, 6.8),
     boxXYZ(32.3, 37.7, y0, y1, 2.7, 6.8), boxXYZ(32.3, 37.7, y0, y1, -6.8, -2.7)];
   mesh(bendable(mergeGeometries(parts)), MAT.lid, layers[6], 'coperchio_microfluidico');
-  const prof = [new V2(2.4, y0), new V2(2.75, y0), new V2(2.75, y1), new V2(3.3, 1.05), new V2(3.0, 1.1), new V2(2.4, y1)];
+  const prof = [new V2(2.4, y0), new V2(2.75, y0), new V2(2.75, y1), new V2(2.98, 1.0), new V2(2.82, 1.05), new V2(2.4, y1)];
   const lathe = new THREE.LatheGeometry(prof, 48); lathe.translate(35, 0, 0);
-  mesh(bendable(lathe), new THREE.MeshPhysicalMaterial({ color: 0xf6f6f2, roughness: 0.15, transmission: 0.7, thickness: 0.4 }), layers[6], 'porta_inoculo');
+  mesh(bendable(lathe), new THREE.MeshPhysicalMaterial({ color: 0xf6f6f2, roughness: 0.15, clearcoat: 1, transparent: true, opacity: 0.6 }), layers[6], 'porta_inoculo');
   // corner fill around the round port
   const sq = new THREE.Shape(rrPoints(5.4, 5.4, 0.01, 1)); sq.holes.push(new THREE.Path(new THREE.Path().absarc(0, 0, 2.74, 0, Math.PI * 2, true).getPoints(48)));
   const cf = extrudeUp(sq, y0, y1 - y0); cf.translate(35, 0, 0);
@@ -670,7 +686,7 @@ const soc = chipPackage(9, 9, 1.0, -9, 12, ['SoC MCU', 'BLE 5.3 RADIO', 'CORTEX-
   mesh(mergeGeometries(frameGeos), MAT.steel, gInside, 'schermo_RF_DSP');
 }
 const dsp = chipPackage(8, 8, 1.1, 12, 12.5, ['DSP', 'LOCK-IN AMP', 'FIR · IIR FILTER'], 'DSP_LockIn', { lift: 1.0, pins: 8 });
-const afe = chipPackage(6, 6, 0.9, 33, 9, ['AFE', 'TIA/POT', '24-bit ADC'], 'AFE_potenziostato', { pins: 6 });
+const afe = chipPackage(6, 6, 0.9, 33, 9, ['AFE GFET', 'VDS/VGS BIAS·TIA', '24-bit ADC'], 'AFE_GFET', { pins: 6 });
 chipPackage(3.2, 2.5, 0.8, -2, 18, ['32M'], 'quarzo', { bg: '#c9ced3' });
 // ref crystal / regulators / passives
 {
@@ -888,6 +904,27 @@ const bound = blob(3.0, 9, 0x9b7fd1); bound.name = 'biomarcatore_legato';
 const apt0 = aptamerGroups[0]; bound.position.copy(apt0.top).add(new V3(0, 2.2, 0)); nano.add(bound);
 const freeTargets = [[-8, 46, -14, 4.6, 1], [26, 50, -6, 5.2, 2], [-30, 44, 4, 4.0, 3]].map(([x, y, z, r, s]) => { const b = blob(r, s, 0x9b7fd1); b.position.set(x, y, z); b.userData.y0 = y; b.name = 'biomarcatore_libero'; nano.add(b); return b; });
 
+// anti-fouling layer: short flexible PEG chains between the aptamers, lower than them
+const pegChains = [];
+{
+  const r = rng(77), tubes = [], beads = [];
+  let tries = 0;
+  while (pegChains.length < 16 && tries++ < 600) {
+    const x = -32 + r() * 62, z = -25 + r() * 50;
+    if (sites.some(([sx, sz]) => Math.hypot(sx - x, sz - z) < 9) || pegChains.some((q) => Math.hypot(q.x - x, q.z - z) < 7)) continue;
+    let p = new V3(x, 3.2, z); const pts = [p.clone()];
+    const n = 6 + Math.floor(r() * 4);
+    for (let i = 0; i < n; i++) { p = p.clone().add(new V3((r() - 0.5) * 2.4, 0.9 + r() * 0.6, (r() - 0.5) * 2.4)); pts.push(p); }
+    pegChains.push({ x, z, top: p.clone() });
+    tubes.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.4, 8));
+    pts.forEach((q, i) => { if (i % 2 === 0) beads.push(atomM(q, i ? 0.5 : 0.7)); });
+  }
+  const pegMat = new THREE.MeshPhysicalMaterial({ color: 0xd3d9de, roughness: 0.5, transparent: true, opacity: 0.55, depthWrite: false });
+  mesh(mergeGeometries(tubes), pegMat, nano, 'PEG_antifouling');
+  const pegBeads = instanced(sphereGeo, pegMat, beads); pegBeads.name = 'PEG_unita_ossietileniche'; nano.add(pegBeads);
+}
+const pegLabelChain = pegChains.reduce((a, b) => (Math.hypot(b.x - 14, b.z - 22) < Math.hypot(a.x - 14, a.z - 22) ? b : a));
+
 // dimension marker next to one aptamer
 const dimApt = aptamerGroups[1];
 const dimH = dimApt.bb.max.y - dimApt.bb.min.y;
@@ -920,13 +957,14 @@ addLabel('Canale GFET attivo', 'grafene + PBASE/aptameri', 'chip', chipPt(1, 25,
 addLabel('Canale di riferimento', 'grafene passivato', 'chip', chipPt(4, 25, 0.12, -3.2));
 addLabel('Source · Au/Cr', '', 'chip', chipPt(3, 21.4, 0.05, 2.0), { left: true });
 addLabel('Drain · Au/Cr', '', 'chip', chipPt(3, 28.6, 0.05, 2.0));
-addLabel('Gate · Au/Cr', 'gate complanare', 'chip', chipPt(3, 26.5, 0.05, 5.5));
+addLabel('Gate · Au/Cr', 'gate in liquido, complanare', 'chip', chipPt(3, 26.5, 0.05, 5.5));
 addLabel('Contatti al lettore', 'S · D · G ×2', 'chip', chipPt(3, 3.5, 0.05, 0.5), { left: true });
-addLabel('Canale microfluidico', 'coperchio trasparente', 'chip', chipPt(6, 31.5, 0.62, -3.2));
+addLabel('Canale microfluidico', 'coperchio trasparente', 'chip', chipPt(6, 20, 0.62, -6.2), { left: true });
+addLabel('Membrana di separazione del plasma', 'trattiene le cellule del sangue', 'chip', chipPt(5, 31.3, 0.28, 0.9));
 
 addLabel('SoC Microcontrollore', 'MCU + radio BLE integrata', 'cut', W(-9, pcbTop + 1.1, 12, gInside));
 addLabel('Modulo DSP', 'filtri + amplificatore lock-in', 'cut', W(12, pcbTop + 2.2, 15, gInside));
-addLabel('AFE amperometrico/potenziometrico', 'TIA · ADC 24 bit', 'cut', W(33, pcbTop + 1, 9, gInside));
+addLabel('AFE per GFET', 'polarizzazione Vds/Vgs · TIA · ADC 24 bit', 'cut', W(33, pcbTop + 1, 9, gInside));
 addLabel('Connettore cartuccia J1', 'molle sui pad S/D/G', 'cut', W(48, 15, 1, gInside));
 addLabel('Batteria Li-Po', '', 'cut', W(-34, pcbTop + 6, 18, gInside), { left: true });
 addLabel('Antenna BLE 2.4 GHz', 'meandro su PCB', 'cut', W(-14, pcbTop + 0.1, 24, gInside));
@@ -935,6 +973,7 @@ addLabel('Grafene monostrato', 'reticolo esagonale sp² · C–C 0,142 nm', 'nan
 addLabel('Linker PBASE', 'pirene impilato π–π a 0,34 nm', 'nano', () => { const s = sites[2]; return new V3(s[0], 4, s[1]); });
 addLabel('Estere NHS', 'PBASE non ancora accoppiato', 'nano', () => { const s = sites[4]; return pb[4].top.clone(); });
 addLabel(`Aptamero ssDNA · ${(dimH / 10).toFixed(1)} × ${(dimW / 10).toFixed(1)} nm`, 'recettore ultracompatto < 2 nm', 'nano', () => new V3(dimApt.bb.max.x + 3.5, (dimApt.bb.min.y + dimApt.bb.max.y) / 2, (dimApt.bb.min.z + dimApt.bb.max.z) / 2));
+addLabel('Strato anti-fouling (PEG)', 'riduce l\'adesione delle altre proteine del plasma', 'nano', () => pegLabelChain.top.clone());
 addLabel('Biomarcatore legato', '', 'nano', () => bound.position.clone().add(new V3(3, 1, 0)));
 addLabel('Biomarcatore libero', 'nel plasma', 'nano', () => freeTargets[1].position.clone().add(new V3(7, 0, 0)));
 addLabel('Elettrodo Source Au/Cr', '', 'nano', W(-GX + 2, 9, -GZ, nano), { left: true });
@@ -953,13 +992,14 @@ function drawDisplay(now) {
   c.beginPath(); c.moveTo(bx - s * .7, by - s * .7); c.lineTo(bx + s * .7, by + s * .7); c.lineTo(bx, by + s * 1.4); c.lineTo(bx, by - s * 1.4); c.lineTo(bx + s * .7, by - s * .7); c.lineTo(bx - s * .7, by + s * .7); c.stroke();
   c.strokeStyle = '#a9b6bd'; c.lineWidth = 4; c.strokeRect(870, 42, 90, 38); c.fillStyle = '#5fd39b'; c.fillRect(876, 48, 64, 26); c.fillStyle = '#a9b6bd'; c.fillRect(962, 52, 8, 18);
   c.fillStyle = '#1b2a32'; c.fillRect(40, 108, w - 80, 3);
-  const msg = { idle: 'Inserire la cartuccia', ready: 'Cartuccia GFET rilevata · inoculare 1 goccia', acq: 'Acquisizione · lock-in differenziale', done: 'Misura completata · dati inviati via BLE' }[disp.state];
+  const msg = { idle: 'Inserire la cartuccia', ready: 'Cartuccia GFET rilevata · inoculare 1 goccia', acq: 'Simulazione · lettura Ids differenziale', done: 'Fine simulazione · nessun dato reale' }[disp.state];
   c.fillStyle = '#c8d4da'; c.font = '500 34px "IBM Plex Sans", sans-serif'; c.fillText(msg, 40, 150);
   // plot
   const X0 = 70, X1 = w - 40, Y0 = 220, Y1 = 600;
   c.strokeStyle = '#22343e'; c.lineWidth = 2;
   for (let i = 0; i <= 4; i++) { const y = Y0 + (Y1 - Y0) * i / 4; c.beginPath(); c.moveTo(X0, y); c.lineTo(X1, y); c.stroke(); }
   c.fillStyle = '#6e8592'; c.font = '26px "IBM Plex Mono", monospace'; c.fillText('ΔIds/I0', X0, Y0 - 24); c.fillText('t', X1 - 14, Y1 + 28);
+  c.fillStyle = '#e3b456'; c.font = '600 28px "IBM Plex Mono", monospace'; c.textAlign = 'right'; c.fillText('SIMULAZIONE', X1, Y0 - 24); c.textAlign = 'left';
   const p = disp.state === 'done' ? 1 : disp.state === 'acq' ? disp.p : 0;
   const N = Math.floor(160 * p);
   const act = (i) => { const t = i / 160; return 0.62 / (1 + Math.exp(-(t - 0.35) * 12)) + 0.02 * Math.sin(i * 0.9) ; };
@@ -970,8 +1010,8 @@ function drawDisplay(now) {
   c.font = '500 26px "IBM Plex Mono", monospace';
   c.fillStyle = '#e3b456'; c.fillText('ATT', X0 + 10, Y1 + 50); c.fillStyle = '#5d7a8a'; c.fillText('RIF', X0 + 100, Y1 + 50); c.fillStyle = '#ff6b5e'; c.fillText('DIFF', X0 + 190, Y1 + 50);
   if (disp.state === 'acq') { c.fillStyle = '#1b2a32'; c.fillRect(40, 690, w - 80, 22); c.fillStyle = '#e3b456'; c.fillRect(40, 690, (w - 80) * p, 22); }
-  if (disp.state === 'done') { c.fillStyle = '#e8eef1'; c.font = '700 46px "IBM Plex Mono", monospace'; c.fillText('Segnale diff. +' + (58.4).toFixed(1).replace('.', ',') + ' %', 40, 700); }
-  if (disp.state === 'idle' || disp.state === 'ready') { c.fillStyle = '#6e8592'; c.font = '28px "IBM Plex Mono", monospace'; c.fillText('f lock-in 1 kHz · Vgs sweep pronto', 40, 700); }
+  if (disp.state === 'done') { c.fillStyle = '#e8eef1'; c.font = '700 46px "IBM Plex Mono", monospace'; c.fillText('SIMULAZIONE – dati illustrativi', 40, 700); }
+  if (disp.state === 'idle' || disp.state === 'ready') { c.fillStyle = '#6e8592'; c.font = '28px "IBM Plex Mono", monospace'; c.fillText('Pronto per la simulazione · Vds/Vgs', 40, 700); }
   dispCanvasTex.needsUpdate = true;
 }
 
@@ -979,16 +1019,16 @@ function drawDisplay(now) {
 const VIEWS = {
   assembled: { cam: [150, 132, 214], tgt: [10, 8, 0], chipIn: true, cut: false, scene: 'macro',
     title: 'Lettore portatile con cartuccia inserita',
-    spec: [['Formato', 'Palmare ~120 × 64 × 26 mm, uso al letto del paziente'], ['Slot', 'Fessura di precisione con 6 contatti a molla sui pad S/D/G'], ['Interfacce', 'Porta USB-C · indicatore Bluetooth Low Energy'], ['Lettura', 'Amperometrica / potenziometrica differenziale']] },
+    spec: [['Formato', 'Palmare ~120 × 64 × 26 mm, uso al letto del paziente'], ['Slot', 'Fessura di precisione con 6 contatti a molla sui pad S/D/G'], ['Interfacce', 'Porta USB-C · indicatore Bluetooth Low Energy'], ['Lettura', 'Conduttanza del canale GFET (Ids), gate in liquido, misura differenziale attivo/riferimento']] },
   chip: { cam: [22, 96, 172], tgt: [0, 30, 104], chipIn: false, cut: false, scene: 'macro',
     title: 'Chip biosensore monouso',
-    spec: [['Substrato', 'Biopolimero flessibile (PLA o cellulosa) al posto del wafer di silicio'], ['Elettrodi', 'Source, Drain e Gate in lega Au/Cr (Cr di adesione + Au)'], ['Canale', 'Grafene monostrato, reticolo esagonale'], ['Differenziale', 'Canale attivo funzionalizzato + canale di riferimento passivato'], ['Campione', 'Porta di inoculo per una singola goccia ematica']] },
+    spec: [['Substrato', 'Biopolimero flessibile (PLA o cellulosa) al posto del wafer di silicio. Obiettivo di ricerca: la riproducibilità su substrati flessibili è da dimostrare'], ['Elettrodi', 'Source, Drain e Gate in lega Au/Cr (Cr di adesione + Au)'], ['Canale', 'Grafene monostrato, reticolo esagonale'], ['Differenziale', 'Canale attivo funzionalizzato + canale di riferimento passivato'], ['Campione', '1 goccia di sangue capillare → filtrata in plasma sul chip']] },
   cut: { cam: [70, 150, 170], tgt: [4, 6, 0], chipIn: true, cut: true, scene: 'macro',
     title: 'Spaccato del lettore',
-    spec: [['SoC', 'Microcontrollore con radio BLE integrata, gestione e telemetria'], ['DSP', 'Filtraggio del segnale e amplificazione lock-in'], ['AFE', 'Front-end analogico per lettura amperometrica/potenziometrica'], ['J1', 'Connettore della cartuccia allineato al passo dei pad']] },
+    spec: [['SoC', 'Microcontrollore con radio BLE integrata, gestione e telemetria'], ['DSP', 'Filtraggio del segnale e amplificazione lock-in'], ['AFE', 'AFE per GFET: polarizzazione Vds/Vgs, amplificatore di transimpedenza, ADC 24 bit'], ['J1', 'Connettore della cartuccia allineato al passo dei pad']] },
   nano: { cam: [84, 66, 118], tgt: [0, 14, 0], chipIn: true, cut: false, scene: 'nano',
     title: 'Zoom nanoscopico sul canale attivo',
-    spec: [['Grafene', 'Monostrato sp², legame C–C 0,142 nm'], ['PBASE', 'Pirene ancorato per impilamento π–π, estere NHS per il legame covalente'], ['Recettori', 'Aptameri ssDNA/RNA sotto i 2 nm, così il legame avviene entro la lunghezza di Debye'], ['Bersaglio', 'Il legame del biomarcatore sposta la conduttanza del canale']] },
+    spec: [['Grafene', 'Monostrato sp², legame C–C 0,142 nm'], ['PBASE', 'Pirene ancorato per impilamento π–π, estere NHS per il legame covalente'], ['Recettori', 'Aptameri ssDNA/RNA sotto i 2 nm, così il legame avviene entro la lunghezza di Debye'], ['Anti-fouling', 'Catene PEG tra gli aptameri'], ['Bersaglio', 'Il legame del biomarcatore sposta la conduttanza del canale']] },
 };
 const POSE = {
   in: { pos: new V3(44, SLOT.y, 0), rot: new THREE.Euler(0, 0, 0) },
@@ -1046,7 +1086,7 @@ function setSubstrate(s) {
 /* ---------- test sequence: drop falls, capillary fill, lock-in acquisition ---------- */
 let testT = -1;
 function startTest() {
-  testT = 0; dropState.t = 0; fluidSegs.forEach((m) => (m.material.opacity = 0));
+  testT = 0; dropState.t = 0; fluidSegs.forEach((m) => (m.material.opacity = 0)); membraneMat.color.copy(MEMBRANE_CLEAN);
   disp.state = VIEWS[view].chipIn ? 'acq' : 'idle'; disp.p = 0;
 }
 function stepTest(dt) {
@@ -1054,7 +1094,9 @@ function stepTest(dt) {
   testT += dt;
   dropState.t = Math.min(1, testT / 0.7);
   const fillStart = 0.8;
-  fluidSegs.forEach((m, i) => { const f = THREE.MathUtils.clamp((testT - fillStart - i * 0.45) / 0.45, 0, 1); m.material.opacity = 0.62 * f; });
+  fluidSegs.forEach((m) => { const f = THREE.MathUtils.clamp((testT - fillStart - m.userData.t0) / 0.45, 0, 1); m.material.opacity = m.userData.op * f; });
+  // the membrane takes up the red cells, only plasma moves on
+  membraneMat.color.lerpColors(MEMBRANE_CLEAN, MEMBRANE_LOADED, THREE.MathUtils.clamp((testT - fillStart - 0.45) / 0.5, 0, 1));
   if (VIEWS[view].chipIn || disp.state === 'acq') {
     disp.state = 'acq'; disp.p = THREE.MathUtils.clamp((testT - 1.4) / 4.5, 0, 1);
     if (disp.p >= 1) disp.state = 'done';
@@ -1134,7 +1176,7 @@ function loop() {
   requestAnimationFrame(loop);
 }
 loop();
-window.__graheal = { setView, startTest, ready: true };
+window.__graheal = { setView, startTest, seekTest: (t) => { startTest(); stepTest(t); }, ready: true };
 </script>
 <!--ARTIFACT-END-->
 </body>

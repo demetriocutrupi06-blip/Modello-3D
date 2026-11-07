@@ -67,7 +67,7 @@ System-on-Chip microcontroller with integrated Bluetooth Low Energy radio (laser
 "SoC MCU / BLE 5.3"), a separate blue daughter-board Digital Signal Processing module under
 an open steel RF shield frame (laser-marked "DSP / LOCK-IN AMP / FIR IIR FILTER") used for
 signal filtering and lock-in amplification, a small analog front-end chip ("AFE TIA/POT"
-for amperometric and potentiometric readout), a meandered 2.4 GHz PCB antenna, a silver
+for GFET readout: Vds/Vgs biasing, transimpedance amplifier, 24-bit ADC), a meandered 2.4 GHz PCB antenna, a silver
 Li-Po pouch battery, a USB-C receptacle at the rear edge, a clear acrylic light pipe from a
 blue SMD LED up to the status lens, and at the front a precision cartridge connector with
 smoked transparent cover and six gold spring contacts pressing on the gold pads of the

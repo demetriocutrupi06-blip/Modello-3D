@@ -23,14 +23,14 @@ per Blender, Keyshot, stampa 3D o come riferimento di forma per i generatori AI.
 | Vista | Cosa mostra |
 |---|---|
 | **Insieme** | Lettore palmare (~120 × 64 × 26 mm) con la cartuccia inserita nello slot, display di stato, pulsante, LED Bluetooth Low Energy, porta USB-C sul retro. |
-| **Chip** | Cartuccia estratta e flessa (slider *Flessione*): substrato biopolimerico PLA o cellulosa (selettore *Substrato*), elettrodi Source/Drain/Gate in Au su strato di adesione Cr, due canali GFET in grafene (attivo funzionalizzato e riferimento passivato), coperchio microfluidico e porta di inoculo con una goccia ematica. |
-| **Spaccato** | Taglio a metà della scocca (sezione in oro) con PCB, **SoC microcontrollore** con radio BLE, **modulo DSP** per filtraggio e amplificazione lock-in, AFE amperometrico/potenziometrico, connettore J1 a 6 contatti a molla allineati ai pad del chip, batteria, antenna BLE, light-pipe del LED e USB-C. |
-| **Nano** | Canale attivo a scala atomica (unità: Å): reticolo esagonale di grafene monostrato, contatti Au/Cr, linker **PBASE** (pirene impilato π–π a 0,34 nm, alcuni ancora con estere NHS), **aptameri ssDNA** a forcina sotto i 2 nm (la misura reale viene calcolata dalla geometria ed è mostrata in etichetta), biomarcatori legati e liberi, barra di scala da 1 nm. |
+| **Chip** | Cartuccia estratta e flessa (slider *Flessione*): substrato biopolimerico PLA o cellulosa (selettore *Substrato*), elettrodi Source/Drain/Gate in Au su strato di adesione Cr, due canali GFET in grafene (attivo funzionalizzato e riferimento passivato), coperchio microfluidico, porta di inoculo per una goccia di sangue capillare e membrana di separazione del plasma. |
+| **Spaccato** | Taglio a metà della scocca (sezione in oro) con PCB, **SoC microcontrollore** con radio BLE, **modulo DSP** per filtraggio e amplificazione lock-in, AFE per GFET (polarizzazione Vds/Vgs, amplificatore di transimpedenza, ADC 24 bit), connettore J1 a 6 contatti a molla allineati ai pad del chip, batteria, antenna BLE, light-pipe del LED e USB-C. |
+| **Nano** | Canale attivo a scala atomica (unità: Å): reticolo esagonale di grafene monostrato, contatti Au/Cr, linker **PBASE** (pirene impilato π–π a 0,34 nm, alcuni ancora con estere NHS), **aptameri ssDNA** a forcina sotto i 2 nm (la misura reale viene calcolata dalla geometria ed è mostrata in etichetta), catene PEG anti-fouling tra gli aptameri, biomarcatori legati e liberi, barra di scala da 1 nm. |
 
 Altri controlli:
 
 - **Esploso**: separa gli strati del chip (substrato → grafene → Cr → Au → biostrato → fluido → coperchio) e i gusci del lettore.
-- **Inocula goccia e misura**: la goccia cade nella porta, il campione riempie il canale a Y fino alle due camere e il display mostra l'acquisizione lock-in differenziale (canale attivo, riferimento e differenza).
+- **Simula una misura**: la goccia cade nella porta, la membrana trattiene le cellule e il plasma (giallo) riempie il canale a Y fino alle due camere; il display mostra una curva Ids differenziale **simulata, con dati illustrativi**.
 
 ## Struttura del chip (coordinate del modello, mm)
 
@@ -48,6 +48,10 @@ Altri controlli:
 ```
 
 ## Note
+
+- È un **concetto, non un prototipo**: nessuna prestazione è stata misurata e i dati sul display sono simulati.
+- Il GFET si legge misurando la conduttanza del canale (corrente source-drain Ids al variare del gate in liquido), in modo differenziale tra canale attivo e di riferimento.
+- La riproducibilità del grafene su substrati flessibili (PLA, cellulosa) è un obiettivo di ricerca, non un risultato.
 
 - Il lettore e il chip sono in scala reciproca. La scena nano usa una scala separata (Å).
 - Le dimensioni del lettore, la capacità della batteria e le diciture sui componenti sono indicative e servono a illustrare il progetto.
